@@ -1,6 +1,7 @@
 from fastapi import FastAPI, APIRouter
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
+
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
@@ -9,7 +10,7 @@ from pydantic import BaseModel, Field, ConfigDict
 from typing import List
 import uuid
 from datetime import datetime, timezone
-
+from routers.auth import router as auth_router
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -68,7 +69,7 @@ async def get_status_checks():
 
 # Include the router in the main app
 app.include_router(api_router)
-
+app.include_router(auth_router)
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
