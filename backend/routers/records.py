@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from bson import ObjectId
 from fastapi import APIRouter, Cookie, HTTPException, status
 
@@ -68,7 +70,7 @@ async def create_record(
     record = {
         "_id": ObjectId(),
         "user_id": user_id,
-        "date": data.date,
+        "date": datetime.combine(data.date, datetime.min.time()),
         "character": data.character,
         "photographer": data.photographer,
         "type": data.type,
