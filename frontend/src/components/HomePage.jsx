@@ -6,9 +6,12 @@ import CalendarView from './CalendarView';
 import PhotoWallView from './PhotoWallView';
 import RecordForm from './RecordForm';
 import RecordDetail from './RecordDetail';
+import AddToHomeHint from './AddToHomeHint';
 import { CalendarDays, LayoutGrid } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { isoInRange } from '../utils/dateUtils';
+
+const DEFAULT_FILTER = { mode: 'year', year: 2026, month: 5, day: null, start: null, end: null };
 
 function applyDateFilter(records, f) {
   switch (f.mode) {
@@ -28,7 +31,6 @@ function applyDateFilter(records, f) {
   }
 }
 
-// 關鍵字比對：標籤、角色、攝影師、備註（不分大小寫；多關鍵字以空白分隔需全部符合）
 function matchesSearch(r, term) {
   const t = (term || '').trim().toLowerCase();
   if (!t) return true;
@@ -40,12 +42,19 @@ function matchesSearch(r, term) {
 export default function HomePage() {
   const { records } = useApp();
   const [view, setView] = useState('calendar');
-  const [filter, setFilter] = useState({ mode: 'year', year: 2026, month: 5, day: null, start: null, end: null });
+  const [filter, setFilter] = useState(DEFAULT_FILTER);
   const [search, setSearch] = useState('');
   const [display, setDisplay] = useState({ year: 2026, month: 5 });
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [detail, setDetail] = useState(null);
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 640);
+
+  useEffect(() => {
+    const onR = () => setIsMobile(window.innerWidth < 640);
+    window.addEventListener('resize', onR);
+    return () => window.removeEventListener('resize', onR);
+  }, []);
 
   const filtered = useMemo(
     () => applyDateFilter(records, filter).filter((r) => matchesSearch(r, search)),
@@ -73,13 +82,26 @@ export default function HomePage() {
     return null;
   }, [filter, filtered]);
 
+  // 當年份有紀錄的月份（供典藏泡泡）
+  const yearMonths = useMemo(() => {
+    const s = new Set();
+    records.forEach((r) => { if (r.date.slice(0, 4) === String(filter.year)) s.add(Number(r.date.slice(5, 7)) - 1); });
+    return Array.from(s).sort((a, b) => a - b);
+  }, [records, filter.year]);
+  const activeMonth = filter.mode === 'month' ? filter.month : null;
+
+  // —— 篩選自動切換檢視：任何篩選→照片牆；清除→月曆 ——
+  const handleFilter = (next) => { setFilter(next); setView('wall'); };
+  const handleSearch = (term) => { setSearch(term); if ((term || '').trim()) setView('wall'); };
+  const handleClear = () => { setFilter(DEFAULT_FILTER); setSearch(''); setView('calendar'); };
+  const applySearch = (term) => { setSearch(term); setView('wall'); };
+  const onTagClick = (tag) => { setDetail(null); setSearch(tag); setView('wall'); };
+  const onPickMonth = (m) => handleFilter({ ...DEFAULT_FILTER, mode: 'month', year: filter.year, month: m });
+
   const openAdd = () => { setEditing(null); setFormOpen(true); };
   const openEdit = (rec) => { setDetail(null); setEditing(rec); setFormOpen(true); };
   const openDetailById = (rec) => setDetail(rec);
-  const applySearch = (term) => setSearch(term);
-  const onTagClick = (tag) => { setDetail(null); setSearch(tag); };
 
-  // 月曆點擊紀錄時：用最新資料重新取得（確保編輯後資料正確）
   const detailLive = useMemo(() => {
     if (!detail) return null;
     return records.find((r) => r.id === detail.id) || null;
@@ -100,41 +122,65 @@ export default function HomePage() {
     <div className="min-h-screen">
       <Header onAddRecord={openAdd} />
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-5">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div>
-            <h2 className="font-serif-tc text-xl font-bold" style={{ color: 'var(--text)' }}>{filter.year} 年度紀錄</h2>
-            <p className="font-deco text-[10px] tracking-[0.25em] text-muted mt-0.5">ANNUAL LOG · {filter.year}</p>
-          </div>
-          <div className="flex rounded-full p-0.5" style={{ background: 'var(--accent-soft)' }}>
-            <Toggle v="calendar" icon={CalendarDays} label="月曆" />
-            <Toggle v="wall" icon={LayoutGrid} label="照片牆" />
-          </div>
-        </div>
-
-        <StatsSummary records={filtered} onApplySearch={applySearch} />
-        <FilterBar records={records} filter={filter} setFilter={setFilter} count={filtered.length} search={search} setSearch={setSearch} />
-
-        {view === 'calendar' ? (
-          <CalendarView
-            records={filtered}
-            displayYear={display.year}
-            displayMonth={display.month}
-            onMonthChange={(y, m) => setDisplay({ year: y, month: m })}
-            highlightSet={highlightSet}
-            onRecordClick={openDetailById}
-          />
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-5">
+        {isMobile && view === 'calendar' ? (
+          <>
+            <CalendarView
+              records={filtered}
+              displayYear={display.year}
+              displayMonth={display.month}
+              onMonthChange={(y, m) => setDisplay({ year: y, month: m })}
+              highlightSet={highlightSet}
+              onRecordClick={openDetailById}
+            />
+            <div className="flex justify-center">
+              <div className="flex rounded-full p-0.5" style={{ background: 'var(--accent-soft)' }}>
+                <Toggle v="calendar" icon={CalendarDays} label="月曆" />
+                <Toggle v="wall" icon={LayoutGrid} label="照片牆" />
+              </div>
+            </div>
+          </>
         ) : (
-          <PhotoWallView records={filtered} onRecordClick={openDetailById} onAddRecord={openAdd} />
+          <>
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <h2 className="font-serif-tc text-xl font-bold" style={{ color: 'var(--text)' }}>{filter.year} 年度紀錄</h2>
+                <p className="font-deco text-[10px] tracking-[0.25em] text-muted mt-0.5">ANNUAL LOG · {filter.year}</p>
+              </div>
+              <div className="flex rounded-full p-0.5" style={{ background: 'var(--accent-soft)' }}>
+                <Toggle v="calendar" icon={CalendarDays} label="月曆" />
+                <Toggle v="wall" icon={LayoutGrid} label="照片牆" />
+              </div>
+            </div>
+
+            <StatsSummary records={filtered} onApplySearch={applySearch} />
+            <FilterBar records={records} filter={filter} setFilter={handleFilter} count={filtered.length}
+              search={search} setSearch={handleSearch} onClear={handleClear} />
+
+            {view === 'calendar' ? (
+              <CalendarView
+                records={filtered}
+                displayYear={display.year}
+                displayMonth={display.month}
+                onMonthChange={(y, m) => setDisplay({ year: y, month: m })}
+                highlightSet={highlightSet}
+                onRecordClick={openDetailById}
+              />
+            ) : (
+              <PhotoWallView records={filtered} months={yearMonths} activeMonth={activeMonth}
+                onPickMonth={onPickMonth} onRecordClick={openDetailById} onAddRecord={openAdd} />
+            )}
+          </>
         )}
 
         <footer className="text-center py-6">
-          <p className="font-deco text-[10px] tracking-[0.3em] text-muted">攔拌紀錄 · COSPLAY LOG</p>
+          <p className="font-deco text-[10px] tracking-[0.3em] text-muted">攪拌紀錄 · COSPLAY LOG</p>
         </footer>
       </main>
 
       <RecordForm open={formOpen} onClose={() => setFormOpen(false)} editing={editing} />
       <RecordDetail record={detailLive} onClose={() => setDetail(null)} onEdit={openEdit} onTagClick={onTagClick} />
+      <AddToHomeHint />
     </div>
   );
 }

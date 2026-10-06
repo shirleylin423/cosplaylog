@@ -21,3 +21,10 @@ root.render(
     </QueryClientProvider>
   </React.StrictMode>,
 );
+
+// 註冊 Service Worker（供「加到主畫面」安裝）
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register(`${process.env.PUBLIC_URL || ''}/sw.js`).catch(() => {});
+  });
+}

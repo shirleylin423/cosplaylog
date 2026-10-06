@@ -13,7 +13,7 @@ const MODES = [
 ];
 const MONTHS = ['1 月','2 月','3 月','4 月','5 月','6 月','7 月','8 月','9 月','10 月','11 月','12 月'];
 
-export default function FilterBar({ records, filter, setFilter, count, search, setSearch }) {
+export default function FilterBar({ records, filter, setFilter, count, search, setSearch, onClear }) {
   const years = useMemo(() => {
     const s = new Set(records.map((r) => Number(r.date.slice(0, 4))));
     s.add(2026);
@@ -25,11 +25,6 @@ export default function FilterBar({ records, filter, setFilter, count, search, s
     background: 'var(--surface-solid)',
     border: '1px solid var(--surface-border)',
     color: 'var(--text)',
-  };
-
-  const clear = () => {
-    setFilter({ mode: 'year', year: 2026, month: 5, day: null, start: null, end: null });
-    setSearch('');
   };
 
   return (
@@ -109,7 +104,7 @@ export default function FilterBar({ records, filter, setFilter, count, search, s
         <div className="flex items-center gap-3">
           <span className="text-sm text-muted whitespace-nowrap">共 <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{count}</span> 筆</span>
           {!isDefault && (
-            <button type="button" onClick={clear} className="btn-ghost rounded-full px-3 py-1.5 text-sm flex items-center gap-1 whitespace-nowrap">
+            <button type="button" onClick={onClear} className="btn-ghost rounded-full px-3 py-1.5 text-sm flex items-center gap-1 whitespace-nowrap">
               <X size={14} /> 清除篩選
             </button>
           )}
