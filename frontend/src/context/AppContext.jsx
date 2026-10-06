@@ -50,10 +50,13 @@ export function AppProvider({ children }) {
   const [records, setRecords] = useState([]);
 
   const [themeKey, setThemeKey] = useState(() => {
-    const t = loadLS(LS_THEME, "tarot");
+    const savedTheme = loadLS(
+      LS_THEME,
+      "tarot"
+    );
 
-    return THEME_ORDER.includes(t)
-      ? t
+    return THEME_ORDER.includes(savedTheme)
+      ? savedTheme
       : "tarot";
   });
 
@@ -65,16 +68,17 @@ export function AppProvider({ children }) {
   );
 
 
-  // --------------------------------
+  // ========================================
   // Authentication
-  // --------------------------------
+  // ========================================
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadSession() {
       try {
-        const currentUser = await getCurrentUser();
+        const currentUser =
+          await getCurrentUser();
 
         if (cancelled) {
           return;
@@ -82,7 +86,8 @@ export function AppProvider({ children }) {
 
         setUser(currentUser);
 
-        const userRecords = await getRecords();
+        const userRecords =
+          await getRecords();
 
         if (!cancelled) {
           setRecords(userRecords);
@@ -107,15 +112,17 @@ export function AppProvider({ children }) {
   }, []);
 
 
-  async function login(username, password) {
-    const loggedInUser = await apiLogin(
-      username,
-      password
-    );
+  async function login(email, password) {
+    const loggedInUser =
+      await apiLogin(
+        email,
+        password
+      );
 
     setUser(loggedInUser);
 
-    const userRecords = await getRecords();
+    const userRecords =
+      await getRecords();
 
     setRecords(userRecords);
 
@@ -123,9 +130,9 @@ export function AppProvider({ children }) {
   }
 
 
-  async function register(username, password) {
+  async function register(email, password) {
     return apiRegister(
-      username,
+      email,
       password
     );
   }
@@ -139,20 +146,23 @@ export function AppProvider({ children }) {
   }
 
 
-  // --------------------------------
+  // ========================================
   // Records
-  // --------------------------------
+  // ========================================
 
   async function addRecord(record) {
     if (!user) {
-      throw new Error("Please login first");
+      throw new Error(
+        "Please login first"
+      );
     }
 
-    const created = await apiCreateRecord(record);
+    const created =
+      await apiCreateRecord(record);
 
-    setRecords((prev) => [
+    setRecords((previous) => [
       created,
-      ...prev,
+      ...previous,
     ]);
 
     return created.id;
@@ -161,61 +171,70 @@ export function AppProvider({ children }) {
 
   async function updateRecord(id, patch) {
     if (!user) {
-      throw new Error("Please login first");
+      throw new Error(
+        "Please login first"
+      );
     }
 
-    const updated = await apiUpdateRecord(
-      id,
-      patch
-    );
+    const updated =
+      await apiUpdateRecord(
+        id,
+        patch
+      );
 
-    setRecords((prev) =>
-      prev.map((record) =>
+    setRecords((previous) =>
+      previous.map((record) =>
         record.id === id
           ? updated
           : record
       )
     );
+
+    return updated;
   }
 
 
   async function deleteRecord(id) {
     if (!user) {
-      throw new Error("Please login first");
+      throw new Error(
+        "Please login first"
+      );
     }
 
     await apiDeleteRecord(id);
 
-    setRecords((prev) =>
-      prev.filter(
-        (record) => record.id !== id
+    setRecords((previous) =>
+      previous.filter(
+        (record) =>
+          record.id !== id
       )
     );
   }
 
 
-  // --------------------------------
+  // ========================================
   // Shoot types
-  // --------------------------------
+  // ========================================
 
   function addShootType(type) {
-    const value = (type || "").trim();
+    const value =
+      (type || "").trim();
 
     if (!value) {
       return;
     }
 
-    setShootTypes((prev) =>
-      prev.includes(value)
-        ? prev
-        : [...prev, value]
+    setShootTypes((previous) =>
+      previous.includes(value)
+        ? previous
+        : [...previous, value]
     );
   }
 
 
-  // --------------------------------
+  // ========================================
   // Local settings
-  // --------------------------------
+  // ========================================
 
   useEffect(() => {
     localStorage.setItem(
@@ -233,8 +252,17 @@ export function AppProvider({ children }) {
   }, [shootTypes]);
 
 
+  // ========================================
+  // Theme
+  // ========================================
+
   useEffect(() => {
-    const theme = THEMES[themeKey];
+    const theme =
+      THEMES[themeKey];
+
+    if (!theme) {
+      return;
+    }
 
     const root =
       document.documentElement;
@@ -262,54 +290,69 @@ export function AppProvider({ children }) {
   }, [themeKey]);
 
 
-  const theme = THEMES[themeKey];
+  const theme =
+    THEMES[themeKey];
 
+
+  // ========================================
+  // Record type colors
+  // ========================================
 
   const typeColorMap = useMemo(() => {
     const map = {};
 
-    shootTypes.forEach((type, index) => {
-      map[type] =
-        theme.typeColors[
-          index %
-            theme.typeColors.length
-        ];
-    });
+    shootTypes.forEach(
+      (type, index) => {
+        map[type] =
+          theme.typeColors[
+            index %
+              theme.typeColors.length
+          ];
+      }
+    );
 
     return map;
   }, [shootTypes, theme]);
 
 
+  // ========================================
+  // Context value
+  // ========================================
+
   const value = {
-    // authentication
+    // Authentication
     user,
     authLoading,
     login,
     register,
     logout,
 
-    // records
+    // Records
     records,
     addRecord,
     updateRecord,
     deleteRecord,
 
-    // settings
+    // Shoot types
     shootTypes,
     addShootType,
 
+    // Theme
     themeKey,
     setThemeKey,
     theme,
     THEMES,
     THEME_ORDER,
 
+    // Colors
     typeColorMap,
   };
 
 
   return (
-    <AppContext.Provider value={value}>
+    <AppContext.Provider
+      value={value}
+    >
       {children}
     </AppContext.Provider>
   );
