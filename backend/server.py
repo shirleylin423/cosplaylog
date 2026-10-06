@@ -11,6 +11,7 @@ from typing import List
 import uuid
 from datetime import datetime, timezone
 from routers.auth import router as auth_router
+from routers.records import router as records_router
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -70,6 +71,7 @@ async def get_status_checks():
 # Include the router in the main app
 app.include_router(api_router)
 app.include_router(auth_router)
+app.include_router(records_router)
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
