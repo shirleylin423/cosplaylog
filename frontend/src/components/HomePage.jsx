@@ -10,7 +10,7 @@ import { CalendarDays, LayoutGrid } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { isoInRange } from '../utils/dateUtils';
 
-function applyFilter(records, f) {
+function applyDateFilter(records, f) {
   switch (f.mode) {
     case 'year':
       return records.filter((r) => r.date.slice(0, 4) === String(f.year));
@@ -28,16 +28,29 @@ function applyFilter(records, f) {
   }
 }
 
+// 關鍵字比對：標籤、角色、攝影師、備註（不分大小寫；多關鍵字以空白分隔需全部符合）
+function matchesSearch(r, term) {
+  const t = (term || '').trim().toLowerCase();
+  if (!t) return true;
+  const hay = [r.character, r.photographer, r.note, r.type, ...(r.tags || [])]
+    .filter(Boolean).join(' ').toLowerCase();
+  return t.split(/\s+/).every((w) => hay.includes(w));
+}
+
 export default function HomePage() {
   const { records } = useApp();
   const [view, setView] = useState('calendar');
   const [filter, setFilter] = useState({ mode: 'year', year: 2026, month: 5, day: null, start: null, end: null });
+  const [search, setSearch] = useState('');
   const [display, setDisplay] = useState({ year: 2026, month: 5 });
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [detail, setDetail] = useState(null);
 
-  const filtered = useMemo(() => applyFilter(records, filter), [records, filter]);
+  const filtered = useMemo(
+    () => applyDateFilter(records, filter).filter((r) => matchesSearch(r, search)),
+    [records, filter, search]
+  );
 
   // 月曆模式下：隨篩選跳至對應月份
   useEffect(() => {
@@ -63,8 +76,10 @@ export default function HomePage() {
   const openAdd = () => { setEditing(null); setFormOpen(true); };
   const openEdit = (rec) => { setDetail(null); setEditing(rec); setFormOpen(true); };
   const openDetailById = (rec) => setDetail(rec);
+  const applySearch = (term) => setSearch(term);
+  const onTagClick = (tag) => { setDetail(null); setSearch(tag); };
 
-  // 月曆点擊紀錄時：用最新資料重新取得（確保編輯後資料正確）
+  // 月曆點擊紀錄時：用最新資料重新取得（確保編輯後資料正確）
   const detailLive = useMemo(() => {
     if (!detail) return null;
     return records.find((r) => r.id === detail.id) || null;
@@ -74,7 +89,7 @@ export default function HomePage() {
     const active = view === v;
     return (
       <button type="button" onClick={() => setView(v)}
-        className="px-4 py-2 text-sm rounded-lg flex items-center gap-1.5 transition-colors font-medium"
+        className="px-4 py-2 text-sm rounded-full flex items-center gap-1.5 transition-colors font-medium"
         style={active ? { background: 'var(--accent)', color: 'var(--on-accent)' } : { color: 'var(--text)' }}>
         <Icon size={16} /> {label}
       </button>
@@ -91,14 +106,14 @@ export default function HomePage() {
             <h2 className="font-serif-tc text-xl font-bold" style={{ color: 'var(--text)' }}>{filter.year} 年度紀錄</h2>
             <p className="font-deco text-[10px] tracking-[0.25em] text-muted mt-0.5">ANNUAL LOG · {filter.year}</p>
           </div>
-          <div className="flex rounded-lg p-0.5" style={{ background: 'var(--accent-soft)' }}>
+          <div className="flex rounded-full p-0.5" style={{ background: 'var(--accent-soft)' }}>
             <Toggle v="calendar" icon={CalendarDays} label="月曆" />
             <Toggle v="wall" icon={LayoutGrid} label="照片牆" />
           </div>
         </div>
 
-        <StatsSummary records={filtered} />
-        <FilterBar records={records} filter={filter} setFilter={setFilter} count={filtered.length} />
+        <StatsSummary records={filtered} onApplySearch={applySearch} />
+        <FilterBar records={records} filter={filter} setFilter={setFilter} count={filtered.length} search={search} setSearch={setSearch} />
 
         {view === 'calendar' ? (
           <CalendarView
@@ -114,12 +129,12 @@ export default function HomePage() {
         )}
 
         <footer className="text-center py-6">
-          <p className="font-deco text-[10px] tracking-[0.3em] text-muted">攔拌紀錄 · COSPLAY ARCHIVE</p>
+          <p className="font-deco text-[10px] tracking-[0.3em] text-muted">攔拌紀錄 · COSPLAY LOG</p>
         </footer>
       </main>
 
       <RecordForm open={formOpen} onClose={() => setFormOpen(false)} editing={editing} />
-      <RecordDetail record={detailLive} onClose={() => setDetail(null)} onEdit={openEdit} />
+      <RecordDetail record={detailLive} onClose={() => setDetail(null)} onEdit={openEdit} onTagClick={onTagClick} />
     </div>
   );
 }

@@ -1,7 +1,10 @@
 // 日期工具 — 全繁體中文，週從「日」開始
 
 export const WEEKDAYS_FULL = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
-export const WEEKDAYS_SHORT = ['日', '一', '二', '三', '四', '五', '六'];
+// 以週一為每週第一天（週末：六、日）
+export const WEEKDAYS_SHORT = ['一', '二', '三', '四', '五', '六', '日'];
+// 標示哪些欄位索引為週末（在週一為首的排列中：索引 5=週六、6=週日）
+export const WEEKEND_COLS = [5, 6];
 
 // 將 Date 轉成 YYYY-MM-DD（本地時區）
 export function toISO(date) {
@@ -51,13 +54,14 @@ export function formatMonthTitle(year, month0) {
   return `${year} 年 ${month0 + 1} 月`;
 }
 
-// 回傳某月的所有日期格子（含前後補白）
-export function getCalendarGrid(year, month0) {
+// 回傳某月的所有日期格子（含前後補白）；weekStart: 0=週日、1=週一（預設週一）
+export function getCalendarGrid(year, month0, weekStart = 1) {
   const first = new Date(year, month0, 1);
   const startDay = first.getDay(); // 0 = 日
+  const offset = (startDay - weekStart + 7) % 7;
   const daysInMonth = new Date(year, month0 + 1, 0).getDate();
   const cells = [];
-  for (let i = 0; i < startDay; i++) cells.push(null);
+  for (let i = 0; i < offset; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) {
     cells.push(new Date(year, month0, d));
   }

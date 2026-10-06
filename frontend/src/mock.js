@@ -16,16 +16,16 @@ const IMG = [
 ];
 
 export const SAMPLE_RECORDS = [
-  { id: 'r1', date: '2026-01-12', character: '星穹卑女', photographer: '雨野', type: '棚拍', note: '冬季棚拍首發，藍紫調燈光。', photo: IMG[0] },
-  { id: 'r2', date: '2026-02-20', character: '白夜騎士', photographer: '小熲', type: '外拍', note: '雪景外拍，成品超出預期！', photo: IMG[1] },
-  { id: 'r3', date: '2026-02-21', character: '花之神子', photographer: '雨野', type: '外拍', note: '與雨野的第二次合作。', photo: IMG[2] },
-  { id: 'r4', date: '2026-03-08', character: '月下巫女', photographer: 'Kai', type: '活動', note: '春季同人場排隊合照。', photo: IMG[3] },
-  { id: 'r5', date: '2026-04-15', character: '玄武將軍', photographer: '小熲', type: '棚拍', note: '重裝甲，布景調整花了三小時。', photo: IMG[4] },
-  { id: 'r6', date: '2026-05-03', character: '樱之姫', photographer: '雨野', type: '外拍', note: '樱花季外拍，人超多。', photo: IMG[5] },
-  { id: 'r7', date: '2026-06-05', character: '深海歌姬', photographer: 'Kai', type: '棚拍', note: '藍調水下感棚拍。', photo: IMG[6] },
-  { id: 'r8', date: '2026-06-06', character: '星穹卑女', photographer: '小熲', type: '同人場', note: 'FF 摂影，跳姿大成功。', photo: IMG[7] },
-  { id: 'r9', date: '2026-06-20', character: '疾風劇團', photographer: '雨野', type: '活動', note: '與團進行團拍。', photo: IMG[8] },
-  { id: 'r10', date: '2026-07-11', character: '花之神子', photographer: 'Kai', type: '外拍', note: '夏日渽林外拍。', photo: IMG[9] },
-  { id: 'r11', date: '2026-09-14', character: '月下巫女', photographer: '雨野', type: '自拍', note: '在家試妆自拍記錄。', photo: IMG[0] },
-  { id: 'r12', date: '2026-11-22', character: '白夜騎士', photographer: '小熲', type: '棚拍', note: '年度收尾重在。', photo: IMG[1] },
+  { id: 'r1', date: '2026-01-12', character: '星穹卑女', photographer: '雨野', type: '棚拍', note: '冬季棚拍首發，藍紫調燈光。', photo: IMG[0], tags: ['冬季', '棚拍系列', '藍紫調'] },
+  { id: 'r2', date: '2026-02-20', character: '白夜騎士', photographer: '小熾', type: '外拍', note: '雪景外拍，成品超出預期！', photo: IMG[1], tags: ['雪景', '盔甲'] },
+  { id: 'r3', date: '2026-02-21', character: '花之神子', photographer: '雨野', type: '外拍', note: '與雨野的第二次合作。', photo: IMG[2], tags: ['和服', '黑長直'] },
+  { id: 'r4', date: '2026-03-08', character: '月下巫女', photographer: 'Kai', type: '活動', note: '春季同人場排隊合照。', photo: IMG[3], tags: ['活動', '春季'] },
+  { id: 'r5', date: '2026-04-15', character: '玄武將軍', photographer: '小熾', type: '棚拍', note: '重裝甲，布景調整花了三小時。', photo: IMG[4], tags: ['棚拍系列', '盔甲'] },
+  { id: 'r6', date: '2026-05-03', character: '樱之姫', photographer: '雨野', type: '外拍', note: '樱花季外拍，人超多。', photo: IMG[5], tags: ['樱花', '春季', '和服'] },
+  { id: 'r7', date: '2026-06-05', character: '深海歌姬', photographer: 'Kai', type: '棚拍', note: '藍調水下感棚拍。', photo: IMG[6], tags: ['棚拍系列', '藍紫調', '夏季'] },
+  { id: 'r8', date: '2026-06-06', character: '星穹卑女', photographer: '小熾', type: '同人場', note: 'FF 摂影，跳姿大成功。', photo: IMG[7], tags: ['活動', '夏季'] },
+  { id: 'r9', date: '2026-06-20', character: '疾風劇團', photographer: '雨野', type: '活動', note: '與團進行團拍。', photo: IMG[8], tags: ['團拍', '活動'] },
+  { id: 'r10', date: '2026-07-11', character: '花之神子', photographer: 'Kai', type: '外拍', note: '夏日湖林外拍。', photo: IMG[9], tags: ['夏季', '黑長直'] },
+  { id: 'r11', date: '2026-09-14', character: '月下巫女', photographer: '雨野', type: '自拍', note: '在家試妆自拍記錄。', photo: IMG[0], tags: ['自拍', '試妆'] },
+  { id: 'r12', date: '2026-11-22', character: '白夜騎士', photographer: '小熾', type: '棚拍', note: '年度收尾重拍。', photo: IMG[1], tags: ['棚拍系列', '盔甲'] },
 ];

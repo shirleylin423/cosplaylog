@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import CornerFlourish from './CornerFlourish';
-import { WEEKDAYS_SHORT, getCalendarGrid, toISO, formatMonthTitle, formatFull } from '../utils/dateUtils';
+import { WEEKDAYS_SHORT, WEEKEND_COLS, getCalendarGrid, toISO, formatMonthTitle, formatFull } from '../utils/dateUtils';
 import { useApp } from '../context/AppContext';
 
 export default function CalendarView({ records, displayYear, displayMonth, onMonthChange, highlightSet, onRecordClick }) {
@@ -27,27 +27,27 @@ export default function CalendarView({ records, displayYear, displayMonth, onMon
   const dayRecords = selectedDate ? (byDate[selectedDate] || []) : [];
 
   return (
-    <div className="surface relative rounded-xl p-4 sm:p-6 overflow-hidden">
+    <div className="surface relative rounded-2xl p-4 sm:p-6 overflow-hidden">
       <CornerFlourish position="tl" size={52} />
       <CornerFlourish position="tr" size={52} />
       <CornerFlourish position="bl" size={52} />
       <CornerFlourish position="br" size={52} />
 
       <div className="flex items-center justify-between mb-5">
-        <button type="button" onClick={prev} className="btn-ghost rounded-lg p-2"><ChevronLeft size={18} /></button>
+        <button type="button" onClick={prev} className="btn-ghost rounded-full p-2"><ChevronLeft size={18} /></button>
         <div className="text-center">
           <div className="font-serif-tc text-xl sm:text-2xl font-bold" style={{ color: 'var(--accent)' }}>
             {formatMonthTitle(displayYear, displayMonth)}
           </div>
           <div className="font-deco text-[10px] tracking-[0.25em] text-muted mt-0.5">ANNUAL LOG · {displayYear}</div>
         </div>
-        <button type="button" onClick={next} className="btn-ghost rounded-lg p-2"><ChevronRight size={18} /></button>
+        <button type="button" onClick={next} className="btn-ghost rounded-full p-2"><ChevronRight size={18} /></button>
       </div>
 
       <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2">
         {WEEKDAYS_SHORT.map((w, i) => (
           <div key={i} className="text-center text-xs sm:text-sm font-serif-tc py-1"
-            style={{ color: i === 0 ? 'var(--accent-2)' : 'var(--text-muted)' }}>{w}</div>
+            style={{ color: WEEKEND_COLS.includes(i) ? 'var(--accent-2)' : 'var(--text-muted)' }}>{w}</div>
         ))}
       </div>
 
@@ -59,19 +59,21 @@ export default function CalendarView({ records, displayYear, displayMonth, onMon
           const has = recs.length > 0;
           const highlighted = highlightSet && highlightSet.has(iso);
           const selected = selectedDate === iso;
+          const weekend = WEEKEND_COLS.includes(i % 7);
           return (
             <button
               key={i}
               type="button"
               onClick={() => has && setSelectedDate(selected ? null : iso)}
-              className="relative aspect-square rounded-lg p-1 sm:p-1.5 flex flex-col items-center justify-start transition-all overflow-hidden"
+              className="relative aspect-square rounded-xl p-1 sm:p-1.5 flex flex-col items-center justify-start transition-all overflow-hidden"
               style={{
                 cursor: has ? 'pointer' : 'default',
                 background: selected ? 'var(--accent)' : highlighted ? 'var(--accent-soft)' : 'transparent',
                 border: `1px solid ${selected ? 'var(--accent)' : highlighted ? 'var(--accent)' : 'var(--surface-border)'}`,
               }}
             >
-              <span className="text-xs sm:text-sm" style={{ color: selected ? 'var(--on-accent)' : 'var(--text)', fontWeight: has ? 600 : 400 }}>
+              <span className="text-xs sm:text-sm"
+                style={{ color: selected ? 'var(--on-accent)' : (weekend ? 'var(--accent-2)' : 'var(--text)'), fontWeight: has ? 600 : 400 }}>
                 {d.getDate()}
               </span>
               {has && (
@@ -99,7 +101,7 @@ export default function CalendarView({ records, displayYear, displayMonth, onMon
           <div className="flex gap-3 overflow-x-auto pb-1">
             {dayRecords.map((r) => (
               <button key={r.id} type="button" onClick={() => onRecordClick(r)}
-                className="flex-shrink-0 w-36 rounded-lg overflow-hidden text-left transition-transform hover:scale-[1.03]"
+                className="flex-shrink-0 w-36 rounded-xl overflow-hidden text-left transition-transform hover:scale-[1.03]"
                 style={{ border: '1px solid var(--surface-border)', background: 'var(--surface-solid)' }}>
                 <div className="h-40 w-full bg-black/20" style={{ backgroundImage: `url(${r.photo})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
                 <div className="p-2">

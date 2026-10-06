@@ -45,16 +45,16 @@ export default function Header({ onAddRecord }) {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
           <div className="flex flex-col leading-none">
             <h1 className="font-serif-tc text-2xl sm:text-3xl font-black tracking-wide">
-              <span style={{ color: 'var(--text)' }}>攔拌</span>
+              <span style={{ color: 'var(--text)' }}>攪拌</span>
               <span className="glow-accent" style={{ color: 'var(--accent)' }}>紀錄</span>
             </h1>
-            <span className="font-deco text-[10px] sm:text-xs tracking-[0.3em] mt-1 text-muted">COSPLAY ARCHIVE · 角色扮演紀錄</span>
+            <span className="font-deco text-[10px] sm:text-xs tracking-[0.3em] mt-1 text-muted">COSPLAY LOG</span>
           </div>
 
           <div className="flex items-center gap-2">
             <Popover open={open} onOpenChange={setOpen}>
               <PopoverTrigger asChild>
-                <button type="button" className="btn-ghost rounded-lg px-3 py-2 text-sm flex items-center gap-1.5">
+                <button type="button" className="btn-ghost rounded-full px-3 py-2 text-sm flex items-center gap-1.5">
                   <Sparkles size={16} style={{ color: 'var(--accent)' }} />
                   <span className="hidden sm:inline">主題</span>
                 </button>
@@ -80,7 +80,7 @@ export default function Header({ onAddRecord }) {
               </PopoverContent>
             </Popover>
 
-            <button type="button" onClick={onAddRecord} className="btn-primary rounded-lg px-3 sm:px-4 py-2 text-sm font-medium flex items-center gap-1.5">
+            <button type="button" onClick={onAddRecord} className="btn-primary rounded-full px-3 sm:px-4 py-2 text-sm font-medium flex items-center gap-1.5">
               <Plus size={16} />
               <span className="hidden sm:inline">新增紀錄</span>
               <span className="sm:hidden">新增</span>

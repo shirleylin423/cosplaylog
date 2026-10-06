@@ -5,11 +5,11 @@ import { Textarea } from './ui/textarea';
 import { Label } from './ui/label';
 import ChineseDatePicker from './ChineseDatePicker';
 import CornerFlourish from './CornerFlourish';
-import { ImagePlus, Plus, Check } from 'lucide-react';
+import { ImagePlus, Plus, Check, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { toast } from 'sonner';
 
-const EMPTY = { photo: '', date: '2026-06-05', character: '', photographer: '', type: '外拍', note: '' };
+const EMPTY = { photo: '', date: '2026-06-05', character: '', photographer: '', type: '外拍', note: '', tags: [] };
 
 // 將圖片縮小為 dataURL（最大邊 1000px）以節省本機儲存
 function fileToResizedDataUrl(file, max = 1000) {
@@ -41,12 +41,13 @@ export default function RecordForm({ open, onClose, editing }) {
   const [form, setForm] = useState(EMPTY);
   const [customOpen, setCustomOpen] = useState(false);
   const [customType, setCustomType] = useState('');
+  const [tagInput, setTagInput] = useState('');
   const fileRef = useRef(null);
 
   useEffect(() => {
     if (open) {
-      setForm(editing ? { ...editing } : EMPTY);
-      setCustomOpen(false); setCustomType('');
+      setForm(editing ? { tags: [], ...editing } : EMPTY);
+      setCustomOpen(false); setCustomType(''); setTagInput('');
     }
   }, [open, editing]);
 
@@ -71,15 +72,27 @@ export default function RecordForm({ open, onClose, editing }) {
     setCustomOpen(false); setCustomType('');
   };
 
+  const addTag = () => {
+    const v = tagInput.trim().replace(/^#/, '');
+    if (!v) return;
+    setForm((f) => (f.tags.includes(v) ? f : { ...f, tags: [...f.tags, v] }));
+    setTagInput('');
+  };
+  const removeTag = (t) => setForm((f) => ({ ...f, tags: f.tags.filter((x) => x !== t) }));
+
   const submit = () => {
     if (!form.photo) return toast.error('請先上傳一張照片。');
     if (!form.character.trim()) return toast.error('請填寫角色名稱。');
     if (!form.date) return toast.error('請選擇日期。');
+    const payload = { ...form };
+    // 若輸入框還有未確認的標籤，一併加入
+    const pending = tagInput.trim().replace(/^#/, '');
+    if (pending && !payload.tags.includes(pending)) payload.tags = [...payload.tags, pending];
     if (editing) {
-      updateRecord(editing.id, form);
+      updateRecord(editing.id, payload);
       toast.success('已更新紀錄。');
     } else {
-      addRecord(form);
+      addRecord(payload);
       toast.success('已新增紀錄。');
     }
     onClose();
@@ -105,12 +118,12 @@ export default function RecordForm({ open, onClose, editing }) {
             <Label className="text-sm mb-1.5 block">照片</Label>
             <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPickFile} />
             <button type="button" onClick={() => fileRef.current?.click()}
-              className="w-full rounded-lg overflow-hidden transition-colors"
+              className="w-full rounded-xl overflow-hidden transition-colors"
               style={{ border: '1px dashed var(--surface-border)' }}>
               {form.photo ? (
                 <div className="relative aspect-[4/3]">
                   <div className="absolute inset-0" style={{ backgroundImage: `url(${form.photo})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
-                  <span className="absolute bottom-2 right-2 text-xs rounded-md px-2 py-1 flex items-center gap-1"
+                  <span className="absolute bottom-2 right-2 text-xs rounded-full px-2 py-1 flex items-center gap-1"
                     style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}><ImagePlus size={12} /> 更換</span>
                 </div>
               ) : (
@@ -125,7 +138,7 @@ export default function RecordForm({ open, onClose, editing }) {
           {/* 日期 */}
           <div>
             <Label className="text-sm mb-1.5 block">日期</Label>
-            <div className="rounded-lg" style={{ border: '1px solid var(--surface-border)' }}>
+            <div className="rounded-xl" style={{ border: '1px solid var(--surface-border)' }}>
               <ChineseDatePicker value={form.date} onChange={(iso) => set('date', iso)} />
             </div>
           </div>
@@ -169,13 +182,41 @@ export default function RecordForm({ open, onClose, editing }) {
                 <div className="flex items-center gap-1">
                   <Input autoFocus value={customType} onChange={(e) => setCustomType(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), confirmCustom())}
-                    placeholder="新類型" className="h-8 w-24"
+                    placeholder="新類型" className="h-8 w-24 rounded-full"
                     style={{ background: 'var(--surface)', borderColor: 'var(--surface-border)', color: 'var(--text)' }} />
-                  <button type="button" onClick={confirmCustom} className="p-1.5 rounded-md" style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}>
+                  <button type="button" onClick={confirmCustom} className="p-1.5 rounded-full" style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}>
                     <Check size={14} />
                   </button>
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* 標籤 */}
+          <div>
+            <Label className="text-sm mb-1.5 block">標籤</Label>
+            {form.tags.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-2">
+                {form.tags.map((t) => (
+                  <span key={t} className="text-xs rounded-full pl-3 pr-1.5 py-1 flex items-center gap-1"
+                    style={{ background: 'var(--accent-soft)', color: 'var(--accent)', border: '1px solid var(--accent)' }}>
+                    #{t}
+                    <button type="button" onClick={() => removeTag(t)} className="rounded-full p-0.5 hover:bg-[var(--accent-2-soft)]">
+                      <X size={12} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <Input value={tagInput} onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={(e) => (e.key === 'Enter' || e.key === ',') && (e.preventDefault(), addTag())}
+                placeholder="輸入標籤後按 Enter（例：夏季、黑長直）"
+                className="rounded-full"
+                style={{ background: 'var(--surface)', borderColor: 'var(--surface-border)', color: 'var(--text)' }} />
+              <button type="button" onClick={addTag} className="btn-ghost rounded-full px-3 py-2 text-sm flex items-center gap-1 whitespace-nowrap">
+                <Plus size={14} /> 加入
+              </button>
             </div>
           </div>
 
@@ -186,8 +227,8 @@ export default function RecordForm({ open, onClose, editing }) {
           </div>
 
           <div className="flex gap-2 pt-1">
-            <button type="button" onClick={onClose} className="btn-ghost rounded-lg px-4 py-2.5 text-sm flex-1">取消</button>
-            <button type="button" onClick={submit} className="btn-primary rounded-lg px-4 py-2.5 text-sm font-medium flex-1">
+            <button type="button" onClick={onClose} className="btn-ghost rounded-full px-4 py-2.5 text-sm flex-1">取消</button>
+            <button type="button" onClick={submit} className="btn-primary rounded-full px-4 py-2.5 text-sm font-medium flex-1">
               {editing ? '儲存變更' : '儲存紀錄'}
             </button>
           </div>
