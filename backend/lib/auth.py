@@ -1,128 +1,70 @@
-from fastapi import APIRouter, HTTPException, Response, status
-from pydantic import BaseModel, EmailStr, Field
+import os
+from datetime import datetime, timedelta, timezone
 
-from lib.auth import (
-    SESSION_COOKIE,
-    create_session,
-    get_user_id_from_session,
-    hash_password,
-    verify_password,
-)
-
-from lib.db import db
+import bcrypt
+import jwt
 
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+SESSION_COOKIE = "ops_session"
+SESSION_HOURS = 14
 
 
-class RegisterInput(BaseModel):
-    email: EmailStr
-    password: str = Field(min_length=8, max_length=128)
+def hash_password(password: str) -> str:
+    return bcrypt.hashpw(
+        password.encode("utf-8"),
+        bcrypt.gensalt(),
+    ).decode("utf-8")
 
 
-class LoginInput(BaseModel):
-    email: EmailStr
-    password: str = Field(min_length=1, max_length=128)
-
-
-@router.post("/register")
-async def register(data: RegisterInput, response: Response):
-    email = data.email.lower().strip()
-
-    existing = await db.users.find_one({"email": email})
-
-    if existing:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="這個 Email 已經註冊",
+def verify_password(password: str, password_hash: str) -> bool:
+    try:
+        return bcrypt.checkpw(
+            password.encode("utf-8"),
+            password_hash.encode("utf-8"),
         )
+    except Exception:
+        return False
 
-    user = {
-        "email": email,
-        "password_hash": hash_password(data.password),
+
+def create_session(user_id: str) -> str:
+    secret = os.environ.get("JWT_SECRET")
+
+    if not secret:
+        raise RuntimeError("JWT_SECRET environment variable is not set")
+
+    now = datetime.now(timezone.utc)
+
+    payload = {
+        "sub": user_id,
+        "iat": now,
+        "exp": now + timedelta(hours=SESSION_HOURS),
     }
 
-    result = await db.users.insert_one(user)
-    user_id = str(result.inserted_id)
-
-    token = create_session(user_id)
-
-    response.set_cookie(
-        key=SESSION_COOKIE,
-        value=token,
-        httponly=True,
-        secure=os.environ.get("COOKIE_SECURE", "true").lower() == "true",
-        samesite="lax",
-        max_age=14 * 60 * 60,
-    )
-
-    return {
-        "id": user_id,
-        "email": email,
-    }
+    return jwt.encode(payload, secret, algorithm="HS256")
 
 
-@router.post("/login")
-async def login(data: LoginInput, response: Response):
-    email = data.email.lower().strip()
+def get_user_id_from_session(token: str | None) -> str | None:
+    if not token:
+        return None
 
-    user = await db.users.find_one({"email": email})
+    secret = os.environ.get("JWT_SECRET")
 
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Email 或密碼錯誤",
+    if not secret:
+        return None
+
+    try:
+        payload = jwt.decode(
+            token,
+            secret,
+            algorithms=["HS256"],
         )
 
-    if not verify_password(data.password, user["password_hash"]):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Email 或密碼錯誤",
-        )
+        user_id = payload.get("sub")
 
-    user_id = str(user["_id"])
-    token = create_session(user_id)
+        if not user_id:
+            return None
 
-    response.set_cookie(
-        key=SESSION_COOKIE,
-        value=token,
-        httponly=True,
-        secure=os.environ.get("COOKIE_SECURE", "true").lower() == "true",
-        samesite="lax",
-        max_age=14 * 60 * 60,
-    )
+        return str(user_id)
 
-    return {
-        "id": user_id,
-        "email": user["email"],
-    }
-
-
-@router.post("/logout")
-async def logout(response: Response):
-    response.delete_cookie(
-        key=SESSION_COOKIE,
-        httponly=True,
-        samesite="lax",
-    )
-
-    return {"message": "已登出"}
-
-
-@router.get("/me")
-async def me(user_id: str = Depends(get_user_id_from_session)):
-    user = await db.users.find_one(
-        {"_id": ObjectId(user_id)},
-        {"password_hash": 0},
-    )
-
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="使用者不存在",
-        )
-
-    return {
-        "id": str(user["_id"]),
-        "email": user["email"],
-    }
+    except jwt.PyJWTError:
+        return None
