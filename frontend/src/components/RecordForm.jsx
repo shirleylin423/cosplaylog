@@ -80,23 +80,74 @@ export default function RecordForm({ open, onClose, editing }) {
   };
   const removeTag = (t) => setForm((f) => ({ ...f, tags: f.tags.filter((x) => x !== t) }));
 
-  const submit = () => {
-    if (!form.photo) return toast.error('請先上傳一張照片。');
-    if (!form.character.trim()) return toast.error('請填寫角色名稱。');
-    if (!form.date) return toast.error('請選擇日期。');
-    const payload = { ...form };
-    // 若輸入框還有未確認的標籤，一併加入
-    const pending = tagInput.trim().replace(/^#/, '');
-    if (pending && !payload.tags.includes(pending)) payload.tags = [...payload.tags, pending];
-    if (editing) {
-      updateRecord(editing.id, payload);
-      toast.success('已更新紀錄。');
-    } else {
-      addRecord(payload);
-      toast.success('已新增紀錄。');
-    }
-    onClose();
+  const submit = async () => {
+  if (!form.photo) {
+    return toast.error('請先上傳一張照片。');
+  }
+
+  if (!form.character.trim()) {
+    return toast.error('請填寫角色名稱。');
+  }
+
+  if (!form.date) {
+    return toast.error('請選擇日期。');
+  }
+
+  const payload = {
+    ...form,
+    character: form.character.trim(),
+    photographer: form.photographer.trim(),
+    note: form.note.trim(),
+    tags: [...(form.tags || [])],
   };
+
+  // 若輸入框還有未確認的標籤，一併加入
+  const pending =
+    tagInput.trim().replace(/^#/, '');
+
+  if (
+    pending &&
+    !payload.tags.includes(pending)
+  ) {
+    payload.tags = [
+      ...payload.tags,
+      pending,
+    ];
+  }
+
+  try {
+    if (editing) {
+      await updateRecord(
+        editing.id,
+        payload
+      );
+
+      toast.success(
+        '已更新紀錄。'
+      );
+    } else {
+      await addRecord(payload);
+
+      toast.success(
+        '已新增紀錄。'
+      );
+    }
+
+    onClose();
+
+  } catch (error) {
+    console.error(
+      'Save record failed:',
+      error
+    );
+
+    toast.error(
+      error?.message ||
+      '儲存失敗，請稍後再試。'
+    );
+  }
+};
+
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
