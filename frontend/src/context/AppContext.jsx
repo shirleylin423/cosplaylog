@@ -132,7 +132,7 @@ export function AppProvider({ children }) {
 
   async function register(email, password) {
     return apiRegister(
-      email,
+      username,
       password
     );
   }
