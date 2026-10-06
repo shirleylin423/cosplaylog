@@ -12,7 +12,7 @@ export default function LoginPage() {
   const [mode, setMode] =
     useState("login");
 
-  const [email, setEmail] =
+  const [username, setUsername] =
     useState("");
 
   const [password, setPassword] =
@@ -28,11 +28,11 @@ export default function LoginPage() {
   async function handleSubmit(event) {
     event.preventDefault();
 
-    const cleanEmail =
-      email.trim().toLowerCase();
+    const cleanUsername =
+      username.trim();
 
-    if (!cleanEmail) {
-      toast.error("請輸入 Email");
+    if (!cleanUsername) {
+      toast.error("請輸入使用者名稱");
       return;
     }
 
@@ -43,6 +43,7 @@ export default function LoginPage() {
 
 
     if (mode === "register") {
+
       if (password.length < 8) {
         toast.error(
           "密碼至少需要 8 個字元"
@@ -66,8 +67,9 @@ export default function LoginPage() {
 
 
       if (mode === "login") {
+
         await login(
-          cleanEmail,
+          cleanUsername,
           password
         );
 
@@ -80,25 +82,28 @@ export default function LoginPage() {
 
 
       await register(
-        cleanEmail,
+        cleanUsername,
         password
       );
 
-      // 註冊成功後直接登入
+
       await login(
-        cleanEmail,
+        cleanUsername,
         password
       );
+
 
       toast.success(
         "註冊成功，歡迎使用！"
       );
 
     } catch (error) {
+
       toast.error(
         error?.message ||
         "操作失敗，請稍後再試"
       );
+
     } finally {
       setLoading(false);
     }
@@ -119,9 +124,11 @@ export default function LoginPage() {
 
   return (
     <div className="login-page">
+
       <div className="login-card">
 
         <div className="login-header">
+
           <div className="login-logo">
             ✦
           </div>
@@ -133,6 +140,7 @@ export default function LoginPage() {
           <p>
             記錄你的每一次 Cosplay
           </p>
+
         </div>
 
 
@@ -142,19 +150,19 @@ export default function LoginPage() {
         >
 
           <label>
-            Email
+            使用者名稱
           </label>
 
           <input
-            type="email"
-            value={email}
+            type="text"
+            value={username}
             onChange={(event) =>
-              setEmail(
+              setUsername(
                 event.target.value
               )
             }
-            placeholder="your@email.com"
-            autoComplete="email"
+            placeholder="請輸入使用者名稱"
+            autoComplete="username"
             disabled={loading}
           />
 
@@ -189,9 +197,7 @@ export default function LoginPage() {
 
               <input
                 type="password"
-                value={
-                  confirmPassword
-                }
+                value={confirmPassword}
                 onChange={(event) =>
                   setConfirmPassword(
                     event.target.value
@@ -221,6 +227,7 @@ export default function LoginPage() {
 
 
         <div className="login-switch">
+
           {mode === "login"
             ? "還沒有帳號？"
             : "已經有帳號？"}
@@ -234,9 +241,11 @@ export default function LoginPage() {
               ? "立即註冊"
               : "返回登入"}
           </button>
+
         </div>
 
       </div>
+
     </div>
   );
 }
