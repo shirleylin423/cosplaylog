@@ -112,10 +112,10 @@ export function AppProvider({ children }) {
   }, []);
 
 
-  async function login(email, password) {
+  async function login(username, password) {
     const loggedInUser =
       await apiLogin(
-        email,
+        username,
         password
       );
 
@@ -130,12 +130,12 @@ export function AppProvider({ children }) {
   }
 
 
-  async function register(email, password) {
-    return apiRegister(
-      username,
-      password
-    );
-  }
+  async function register(username, password) {
+  return apiRegister(
+    username,
+    password
+  );
+}
 
 
   async function logout() {
