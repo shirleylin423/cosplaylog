@@ -33,11 +33,9 @@ async function request(path, options = {}) {
       data?.detail ||
       `Request failed: ${response.status}`;
 
-    const error =
-      new Error(message);
+    const error = new Error(message);
 
-    error.status =
-      response.status;
+    error.status = response.status;
 
     throw error;
   }
@@ -57,7 +55,7 @@ export async function getCurrentUser() {
 
 
 export async function login(
-  email,
+  username,
   password
 ) {
   return request(
@@ -66,7 +64,7 @@ export async function login(
       method: "POST",
 
       body: JSON.stringify({
-        email,
+        username,
         password,
       }),
     }
@@ -75,7 +73,7 @@ export async function login(
 
 
 export async function register(
-  email,
+  username,
   password
 ) {
   return request(
@@ -84,7 +82,7 @@ export async function register(
       method: "POST",
 
       body: JSON.stringify({
-        email,
+        username,
         password,
       }),
     }
@@ -107,9 +105,7 @@ export async function logout() {
 // ========================================
 
 export async function getRecords() {
-  return request(
-    "/api/records"
-  );
+  return request("/api/records");
 }
 
 
