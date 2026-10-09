@@ -35,6 +35,11 @@
   "auth.error.passwordMismatch": "兩次輸入的密碼不一致",
   "auth.error.invalidCredentials": "Email 或密碼不正確",
   "auth.error.emailTaken": "這個 Email 已經註冊過了，請直接登入",
+  "auth.error.emailNotConfirmed": "這個 Email 還沒完成驗證。請去信箱點確認連結，或請管理者在後台手動確認帳號後再登入。",
+  "auth.error.signupDisabled": "這個後端目前不開放註冊，請在後台開啟 Email 註冊功能。",
+  "auth.error.rateLimited": "操作太頻繁（驗證信寄送次數可能已達上限），請稍後再試。",
+  "auth.error.apiKey": "後端金鑰設定有誤。請確認 index.html 裡的 anonKey 是 anon／public 或 Publishable key，而不是 service_role 或網址。",
+  "auth.error.network": "連不到後端，請檢查網路連線，或確認 index.html 裡的後端網址是否正確。",
   "auth.error.generic": "操作失敗，請稍後再試",
   "auth.toast.loginSuccess": "登入成功！",
   "auth.toast.registerSuccess": "註冊成功，歡迎使用！",
@@ -82,6 +87,8 @@
 
   "calendar.deco": "ANNUAL LOG · {{year}}",
   "calendar.multiCount": "+{{count}}",
+  "calendar.today": "回到今天",
+  "calendar.dayHint": "這天有 {{count}} 筆紀錄，點一下看照片",
 
   "wall.collection": "典藏",
   "wall.monthBubble": "{{month}}月",

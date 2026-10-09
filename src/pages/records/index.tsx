@@ -164,6 +164,25 @@ export default function RecordsPage() {
     handleFilter({ ...createDefaultFilter(), mode: "month", year: filter.year, month });
   }
 
+  /** 點月曆上的某一天：跳到照片牆並只顯示那一天 */
+  function handlePickDay(iso: string) {
+    setDetail(null);
+    handleFilter({
+      ...createDefaultFilter(),
+      mode: "day",
+      year: Number(iso.slice(0, 4)),
+      day: iso,
+    });
+  }
+
+  /** 回到今天：重設篩選並把月曆移回當月 */
+  function handleToday() {
+    const now = new Date();
+    setFilter(createDefaultFilter());
+    setSearch("");
+    setDisplay({ year: now.getFullYear(), month: now.getMonth() });
+  }
+
   function onTagClick(tag: string) {
     setDetail(null);
     applySearch(tag);
@@ -295,7 +314,8 @@ export default function RecordsPage() {
               displayMonth={display.month}
               onMonthChange={(year, month) => setDisplay({ year, month })}
               highlightSet={highlightSet}
-              onRecordClick={setDetail}
+              onPickDay={handlePickDay}
+              onTodayClick={handleToday}
               typeColorMap={typeColorMap}
             />
 
@@ -337,7 +357,8 @@ export default function RecordsPage() {
                 displayMonth={display.month}
                 onMonthChange={(year, month) => setDisplay({ year, month })}
                 highlightSet={highlightSet}
-                onRecordClick={setDetail}
+                onPickDay={handlePickDay}
+                onTodayClick={handleToday}
                 typeColorMap={typeColorMap}
               />
             ) : (

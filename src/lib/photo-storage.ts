@@ -1,22 +1,29 @@
 /**
- * 照片上傳：檔案會存進 Enter Cloud 的儲存空間，回傳可直接顯示的公開網址。
+ * 照片上傳：檔案會先壓縮，再存進 Enter Cloud／你自己的儲存空間，回傳可直接顯示的網址。
+ *
+ * 為什麼要壓縮：手機原圖一張動輒 3～5 MB，免費的 1 GB 儲存空間只放得下約 300 張。
+ * 壓縮到長邊 1600px 後，一張約 200～400 KB，同樣空間可以放 3,000 張以上，
+ * 上傳也快很多，而在手機螢幕上幾乎看不出畫質差異。
+ *
+ * 想更省空間可以調下面的參數（例如長邊 1280、品質 0.75）。
  * 路徑為 `{使用者 ID}/{亂數}.{副檔名}`，資料庫政策只允許本人上傳／覆蓋／刪除自己的照片。
  */
 
-import { supabase } from "@/lib/backend";
+import { photoUploadUrl, supabase } from "@/lib/backend";
 
 const BUCKET = "cosplay-photos";
 const MAX_BYTES = 10 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
-function extensionOf(file: File): string {
-  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
-  if (ext === "jpeg") return "jpg";
-  if (ALLOWED_MIME_TYPES.includes(file.type)) {
-    return file.type.replace("image/", "").replace("jpeg", "jpg");
-  }
-  return ext || "jpg";
-}
+/** 壓縮設定：想更省空間就把 maxEdge / quality 調低 */
+export const PHOTO_COMPRESSION = {
+  /** 長邊上限（像素）。1600 在手機上顯示已足夠清晰 */
+  maxEdge: 1600,
+  /** 畫質（0～1）。0.8 大約是「看不出差異」與「檔案夠小」的平衡點 */
+  quality: 0.8,
+  /** 小於這個大小的檔案就不重新編碼，免得白白損失畫質 */
+  skipBelowBytes: 300 * 1024,
+};
 
 /** 回傳 i18n 錯誤 key；檔案沒問題時回傳 null */
 export function validatePhotoFile(file: File): string | null {
@@ -29,11 +36,120 @@ export function validatePhotoFile(file: File): string | null {
   return null;
 }
 
-export async function uploadCosplayPhoto(file: File, userId: string): Promise<string> {
-  const path = `${userId}/${crypto.randomUUID()}.${extensionOf(file)}`;
+function extensionFromMime(mime: string, fallbackName: string): string {
+  if (mime === "image/webp") return "webp";
+  if (mime === "image/jpeg") return "jpg";
+  if (mime === "image/png") return "png";
+  if (mime === "image/gif") return "gif";
 
-  const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
-    contentType: file.type || "image/jpeg",
+  const ext = fallbackName.split(".").pop()?.toLowerCase() ?? "";
+  return ext || "jpg";
+}
+
+let webpSupport: boolean | null = null;
+
+function supportsWebp(): boolean {
+  if (webpSupport === null) {
+    try {
+      webpSupport = document.createElement("canvas").toDataURL("image/webp").startsWith("data:image/webp");
+    } catch {
+      webpSupport = false;
+    }
+  }
+  return webpSupport;
+}
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("圖片讀取失敗"));
+    image.src = src;
+  });
+}
+
+function canvasToBlob(canvas: HTMLCanvasElement, mime: string, quality: number): Promise<Blob | null> {
+  return new Promise((resolve) => {
+    canvas.toBlob((blob) => resolve(blob), mime, quality);
+  });
+}
+
+/** 壓縮照片；不適合壓縮的情況（GIF 動畫、很小的檔案、壓完反而更大）就回傳原檔 */
+async function preparePhoto(file: File): Promise<{ blob: Blob; extension: string }> {
+  const original = { blob: file, extension: extensionFromMime(file.type, file.name) };
+
+  // GIF 可能是動畫，重新編碼會變成靜態圖
+  if (file.type === "image/gif") return original;
+
+  const targetMime = supportsWebp() ? "image/webp" : "image/jpeg";
+
+  // 不支援 WebP 時，PNG 轉 JPEG 會讓透明區域變黑，所以保留原檔
+  if (file.type === "image/png" && targetMime === "image/jpeg") return original;
+
+  if (file.size <= PHOTO_COMPRESSION.skipBelowBytes) return original;
+
+  const objectUrl = URL.createObjectURL(file);
+
+  try {
+    const image = await loadImage(objectUrl);
+    const scale = Math.min(1, PHOTO_COMPRESSION.maxEdge / Math.max(image.width, image.height));
+    const width = Math.max(1, Math.round(image.width * scale));
+    const height = Math.max(1, Math.round(image.height * scale));
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+
+    const context = canvas.getContext("2d");
+    if (!context) return original;
+
+    context.drawImage(image, 0, 0, width, height);
+
+    const blob = await canvasToBlob(canvas, targetMime, PHOTO_COMPRESSION.quality);
+
+    if (!blob || blob.size >= file.size) return original;
+
+    return { blob, extension: extensionFromMime(targetMime, file.name) };
+  } catch {
+    return original;
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
+/** 上傳到外部端點（Cloudflare Worker 存進 R2）：金鑰留在 Worker，前端只帶登入憑證 */
+async function uploadToWorker(endpoint: string, blob: Blob): Promise<string> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+
+  if (!token) {
+    throw new Error("未登入");
+  }
+
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": blob.type || "image/webp",
+    },
+    body: blob,
+  });
+
+  const payload = (await response.json().catch(() => null)) as { url?: string; error?: string } | null;
+
+  if (!response.ok || !payload?.url) {
+    throw new Error(payload?.error || "照片上傳失敗");
+  }
+
+  return payload.url;
+}
+
+/** 上傳到後端自己的儲存空間（未設定外部端點時的預設行為） */
+async function uploadToStorage(blob: Blob, extension: string, userId: string): Promise<string> {
+  const path = `${userId}/${crypto.randomUUID()}.${extension}`;
+
+  const { error } = await supabase.storage.from(BUCKET).upload(path, blob, {
+    contentType: blob.type || "image/jpeg",
     upsert: false,
   });
 
@@ -46,4 +162,15 @@ export async function uploadCosplayPhoto(file: File, userId: string): Promise<st
   }
 
   return data.publicUrl;
+}
+
+export async function uploadCosplayPhoto(file: File, userId: string): Promise<string> {
+  const { blob, extension } = await preparePhoto(file);
+
+  // 有設定 photoUploadUrl 就存到自己的儲存空間（例如 Cloudflare R2）
+  if (photoUploadUrl) {
+    return uploadToWorker(photoUploadUrl, blob);
+  }
+
+  return uploadToStorage(blob, extension, userId);
 }

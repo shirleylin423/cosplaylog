@@ -24,13 +24,16 @@
   <!--
     後端設定。
     預設使用 Enter Cloud，不需要填寫。
-    若要把 App 接到「你自己的」後端，把下面這行的註解拿掉並填入你的設定即可，
+    若要把 App 接到「你自己的」後端，把下面這段打開並填入你的設定即可，
     不需要改任何程式碼，也不用重新建置。
+    照片若要存到 Cloudflare R2（省空間、流量免費），再加上 photoUploadUrl 那一行
+    （Worker 的部署方式見 cloudflare/photo-upload-worker/README.md）。
   -->
   <script>
     // window.__BACKEND__ = {
     //   url: "https://你的專案.supabase.co",
-    //   anonKey: "你的 anon key",
+    //   anonKey: "你的 anon / publishable 金鑰",
+    //   photoUploadUrl: "https://你的-photo-worker.帳號.workers.dev",
     // };
   </script>
 

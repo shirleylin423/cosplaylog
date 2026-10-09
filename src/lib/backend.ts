@@ -23,6 +23,8 @@ import type { Database } from "@/integrations/supabase/types";
 type BackendOverride = {
   url?: string;
   anonKey?: string;
+  /** 照片上傳端點（Cloudflare Worker 等）。沒設定就上傳到後端自己的儲存空間 */
+  photoUploadUrl?: string;
 };
 
 const override = (window as Window & { __BACKEND__?: BackendOverride }).__BACKEND__;
@@ -31,6 +33,9 @@ const overrideKey = override?.anonKey?.trim();
 
 export const backendUrl = overrideUrl || SUPABASE_URL;
 export const isUsingOwnBackend = Boolean(overrideUrl);
+
+/** 照片上傳端點；未設定時為空字串（改用後端內建的儲存空間） */
+export const photoUploadUrl = override?.photoUploadUrl?.trim() || "";
 
 export const supabase = overrideUrl
   ? createClient<Database>(overrideUrl, overrideKey || SUPABASE_PUBLISHABLE_KEY, {

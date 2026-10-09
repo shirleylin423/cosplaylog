@@ -9,6 +9,8 @@ project-root/
   │   ├── locales/           # public/locales/{code}.json translation files
   │   ├── manifest.webmanifest # PWA manifest（加到手機主畫面）
   │   └── icon-*.png         # PWA／主畫面圖示
+  ├── cloudflare/photo-upload-worker/ # 選用：照片改存 Cloudflare R2 的 Worker（含部署說明）
+  ├── migration-kit/         # 搬家套件：資料庫結構 schema.sql 與步驟說明
   └── src/
       ├── components/        # All reusable UI components
       │   ├── ui/            # Prebuilt and custom UI components, grouped by function
@@ -72,7 +74,7 @@ project-root/
   - `login/`: 登入與註冊（Email + 密碼），登入成功後轉往 `/`。
   - `records/`: 我的紀錄頁；頁面專屬元件放 `records/components/`（含年度回憶 `year-in-review.tsx` 與照片輪播 `year-in-review-carousel.tsx`），篩選邏輯放 `records/use-record-filters.ts`。
 - **src/context/**: 跨頁面共用的狀態。目前只有帳號狀態（`auth-provider.tsx`），由 `hooks/use-auth.ts` 讀取。
-- **src/lib/backend.ts**: 後端連線的唯一入口。其他檔案一律從這裡取得 `supabase`，不要直接 import 產生檔。要改接自己的後端時，只改 `index.html` 裡的 `window.__BACKEND__`（見 `migration-kit/README.md`）。
+- **src/lib/backend.ts**: 後端連線的唯一入口。其他檔案一律從這裡取得 `supabase`，不要直接 import 產生檔。要改接自己的後端時，只改 `index.html` 裡的 `window.__BACKEND__`（見 `migration-kit/README.md`）。照片儲存可用 `photoUploadUrl` 另外指向 Cloudflare R2 的 Worker。
 - **src/lib/records.ts**: 紀錄的資料存取層。查詢只會取得登入者自己的資料，隔離由資料庫的 RLS 政策負責，前端不做權限判斷。
 - **migration-kit/**: 要把 App 搬到自己後端時用的資料庫結構（`schema.sql`）與步驟說明。
 - **src/App.tsx**: Sets up global providers.

@@ -37,7 +37,9 @@ jobs:
         run: pnpm install --no-frozen-lockfile
 
       - name: Build
-        run: pnpm run build:prod -- --base=/${{ github.event.repository.name }}/
+        # 注意：這裡不能寫成 `pnpm run build:prod -- --base=...`，
+        # 那個寫法 pnpm 不會把 --base 傳給 vite，資源路徑就不會加上子目錄，網站會變空白。
+        run: pnpm run build:prod --base=/${{ github.event.repository.name }}/
 
       # 讓深層連結（例如直接開啟 /login）也能正確載入
       - name: SPA fallback

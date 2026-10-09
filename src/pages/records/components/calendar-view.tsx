@@ -1,25 +1,27 @@
-import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, ImageOff } from "lucide-react";
+import { useMemo } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import CornerFlourish from "@/components/corner-flourish";
-import {
-  WEEKDAYS_SHORT,
-  WEEKEND_COLS,
-  formatFull,
-  formatMonthTitle,
-  getCalendarGrid,
-  toISO,
-} from "@/lib/date-utils";
+import { WEEKDAYS_SHORT, WEEKEND_COLS, formatMonthTitle, getCalendarGrid, toISO } from "@/lib/date-utils";
 import type { CosplayRecord } from "@/lib/record-types";
+import CalendarDayCell from "./calendar-day-cell";
 
-/** 會顯示照片的手機行事曆小工具風格月曆 */
+/**
+ * 會顯示照片的手機行事曆小工具風格月曆。
+ *
+ * - 有紀錄的日期直接以照片呈現；同一天多筆會並排兩張縮圖
+ * - 滑鼠移到格子上會自動輪播當天的照片
+ * - 點格子會跳到照片牆並篩選那一天
+ * - 今天會用金色外框標示，並可直接跳回今天
+ */
 export default function CalendarView({
   records,
   displayYear,
   displayMonth,
   onMonthChange,
   highlightSet,
-  onRecordClick,
+  onPickDay,
+  onTodayClick,
   typeColorMap,
 }: {
   records: CosplayRecord[];
@@ -27,12 +29,13 @@ export default function CalendarView({
   displayMonth: number;
   onMonthChange: (year: number, month: number) => void;
   highlightSet: Set<string> | null;
-  onRecordClick: (record: CosplayRecord) => void;
+  onPickDay: (iso: string) => void;
+  onTodayClick: () => void;
   typeColorMap: Record<string, string>;
 }) {
   const { t } = useTranslation();
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const cells = getCalendarGrid(displayYear, displayMonth);
+  const todayIso = toISO(new Date());
 
   const byDate = useMemo(() => {
     const map: Record<string, CosplayRecord[]> = {};
@@ -43,18 +46,14 @@ export default function CalendarView({
   }, [records]);
 
   function prevMonth() {
-    setSelectedDate(null);
     if (displayMonth === 0) onMonthChange(displayYear - 1, 11);
     else onMonthChange(displayYear, displayMonth - 1);
   }
 
   function nextMonth() {
-    setSelectedDate(null);
     if (displayMonth === 11) onMonthChange(displayYear + 1, 0);
     else onMonthChange(displayYear, displayMonth + 1);
   }
-
-  const dayRecords = selectedDate ? byDate[selectedDate] || [] : [];
 
   return (
     <div className="surface relative overflow-hidden rounded-3xl p-3 sm:p-6">
@@ -63,7 +62,7 @@ export default function CalendarView({
       <CornerFlourish position="bl" size={52} />
       <CornerFlourish position="br" size={52} />
 
-      <div className="mb-4 flex items-center justify-between">
+      <div className="flex items-center justify-between">
         <button type="button" onClick={prevMonth} className="btn-ghost rounded-full p-2" aria-label={t("filter.mode.month")}>
           <ChevronLeft size={18} />
         </button>
@@ -79,6 +78,16 @@ export default function CalendarView({
 
         <button type="button" onClick={nextMonth} className="btn-ghost rounded-full p-2" aria-label={t("filter.mode.month")}>
           <ChevronRight size={18} />
+        </button>
+      </div>
+
+      <div className="mb-3 mt-2 flex justify-center">
+        <button
+          type="button"
+          onClick={onTodayClick}
+          className="btn-ghost font-serif-tc rounded-full px-3 py-1 text-xs"
+        >
+          {t("calendar.today")}
         </button>
       </div>
 
@@ -99,124 +108,22 @@ export default function CalendarView({
           if (!date) return <div key={index} />;
 
           const iso = toISO(date);
-          const dayRecordsForCell = byDate[iso] || [];
-          const hasRecords = dayRecordsForCell.length > 0;
-          const highlighted = Boolean(highlightSet?.has(iso));
-          const selected = selectedDate === iso;
-          const weekend = WEEKEND_COLS.includes(index % 7);
-          const first = dayRecordsForCell[0];
-          const typeColor = first ? typeColorMap[first.type] || "var(--accent)" : null;
-
-          if (hasRecords && first) {
-            return (
-              <button
-                key={index}
-                type="button"
-                onClick={() => setSelectedDate(selected ? null : iso)}
-                className="relative aspect-square overflow-hidden rounded-xl transition-transform hover:scale-[1.04] sm:rounded-2xl"
-                style={{ border: `2px solid ${selected ? "var(--accent)" : typeColor}` }}
-              >
-                {first.photo ? (
-                  <div
-                    className="absolute inset-0"
-                    style={{
-                      backgroundImage: `url(${first.photo})`,
-                      backgroundSize: "cover",
-                      backgroundPosition: "center",
-                    }}
-                  />
-                ) : (
-                  <div
-                    className="absolute inset-0 flex items-center justify-center"
-                    style={{ background: "var(--accent-soft)" }}
-                  >
-                    <ImageOff size={14} style={{ color: typeColor ?? "var(--accent)" }} />
-                  </div>
-                )}
-
-                <div
-                  className="absolute inset-x-0 top-0 h-1/2"
-                  style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.55), transparent)" }}
-                />
-
-                <span
-                  className="absolute left-1 top-0.5 text-[10px] font-bold sm:text-xs"
-                  style={{ color: "#fff", textShadow: "0 1px 2px rgba(0,0,0,0.8)" }}
-                >
-                  {date.getDate()}
-                </span>
-
-                {dayRecordsForCell.length > 1 && (
-                  <span
-                    className="absolute bottom-0.5 right-0.5 rounded-full px-1 text-[9px] font-semibold sm:text-[10px]"
-                    style={{ background: "var(--accent)", color: "var(--on-accent)" }}
-                  >
-                    {t("calendar.multiCount", { count: dayRecordsForCell.length - 1 })}
-                  </span>
-                )}
-
-                {selected && <div className="absolute inset-0" style={{ background: "var(--accent-soft)" }} />}
-              </button>
-            );
-          }
 
           return (
-            <div
+            <CalendarDayCell
               key={index}
-              className="relative flex aspect-square items-start justify-start rounded-xl p-1 sm:rounded-2xl sm:p-1.5"
-              style={{
-                border: `1px solid ${highlighted ? "var(--accent)" : "var(--surface-border)"}`,
-                background: highlighted ? "var(--accent-soft)" : "transparent",
-              }}
-            >
-              <span
-                className="text-[11px] sm:text-sm"
-                style={{ color: weekend ? "var(--accent-2)" : "var(--text-muted)" }}
-              >
-                {date.getDate()}
-              </span>
-            </div>
+              date={date}
+              iso={iso}
+              records={byDate[iso] || []}
+              weekend={WEEKEND_COLS.includes(index % 7)}
+              isToday={iso === todayIso}
+              highlighted={Boolean(highlightSet?.has(iso))}
+              typeColorMap={typeColorMap}
+              onPickDay={onPickDay}
+            />
           );
         })}
       </div>
-
-      {selectedDate && dayRecords.length > 0 && (
-        <div className="mt-5 pt-4" style={{ borderTop: "1px solid var(--surface-border)" }}>
-          <div className="font-serif-tc mb-3 text-sm" style={{ color: "var(--accent)" }}>
-            {formatFull(selectedDate)}
-          </div>
-
-          <div className="flex gap-3 overflow-x-auto pb-1">
-            {dayRecords.map((record) => (
-              <button
-                key={record.id}
-                type="button"
-                onClick={() => onRecordClick(record)}
-                className="w-32 flex-shrink-0 overflow-hidden rounded-2xl text-left transition-transform hover:scale-[1.03] sm:w-36"
-                style={{ border: "1px solid var(--surface-border)", background: "var(--surface-solid)" }}
-              >
-                <div
-                  className="h-36 w-full sm:h-40"
-                  style={{
-                    background: record.photo ? undefined : "var(--accent-soft)",
-                    backgroundImage: record.photo ? `url(${record.photo})` : undefined,
-                    backgroundSize: "cover",
-                    backgroundPosition: "center",
-                  }}
-                />
-                <div className="p-2">
-                  <div className="truncate text-sm font-medium" style={{ color: "var(--text)" }}>
-                    {record.character}
-                  </div>
-                  <div className="text-muted-foreground truncate text-xs">
-                    {record.photographer || t("wall.noPhotographer")}
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
