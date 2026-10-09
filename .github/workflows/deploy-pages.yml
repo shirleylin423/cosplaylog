@@ -37,7 +37,8 @@ jobs:
         run: pnpm install --no-frozen-lockfile
 
       - name: Build
-        run: pnpm run build:prod -- --base=/${{ github.event.repository.name }}/
+        run: pnpm run build:prod --base=/${{ github.event.repository.name }}/
+
 
       # 讓深層連結（例如直接開啟 /login）也能正確載入
       - name: SPA fallback
