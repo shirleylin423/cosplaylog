@@ -1,6 +1,17 @@
 # 照片上傳 Worker（Cloudflare Workers + R2）
 
-這個 Worker 負責保管 R2 的金鑰、確認登入身分、把照片存進 R2。
+這個 Worker 負責保管 R2 的金鑰、確認登入身分、把照片存進 R2，並在刪除紀錄時刪掉對應的照片。
+
+**端點**
+
+| 端點 | 用途 |
+|---|---|
+| `POST /` | 上傳照片（body 是圖片本身） |
+| `POST /delete` | 刪除照片（body 是 `{ "url": "照片公開網址" }`） |
+
+兩者都需要帶上使用者的登入憑證；刪除時 Worker 會確認那個檔案在**你自己的資料夾**底下才刪。
+
+> 程式更新後，記得回 Worker → **Edit code** → 貼上最新內容 → **Deploy**，新功能才會生效。
 
 **為什麼不直接從瀏覽器上傳到 R2？** 因為那需要把 R2 的密鑰放進前端，
 任何人都能拿到並寫入你的儲存空間。所以一定要有一個小後端來保管金鑰，
@@ -33,7 +44,7 @@ Worker → **Settings** → **Variables and Secrets**，新增這四個（型別
 | `SUPABASE_URL` | `https://你的專案.supabase.co` |
 | `SUPABASE_ANON_KEY` | 你的 anon / publishable 金鑰 |
 | `PUBLIC_BASE_URL` | 第 1 步複製的 `https://pub-xxxx.r2.dev` |
-| `ALLOWED_ORIGIN` | `https://你的帳號.github.io` |
+| `ALLOWED_ORIGIN` | 允許的網站來源。多個用**逗號分隔**（例如正式網站 + Enter 預覽視窗）；填 `*` 表示全部允許 |
 
 存好後記得 **Deploy** 一次讓設定生效。
 

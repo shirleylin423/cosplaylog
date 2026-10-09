@@ -123,22 +123,28 @@ async function uploadToWorker(endpoint: string, blob: Blob): Promise<string> {
   const token = data.session?.access_token;
 
   if (!token) {
-    throw new Error("未登入");
+    throw new Error("登入狀態已失效，請重新登入");
   }
 
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": blob.type || "image/webp",
-    },
-    body: blob,
-  });
+  let response: Response;
+
+  try {
+    response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": blob.type || "image/webp",
+      },
+      body: blob,
+    });
+  } catch {
+    throw new Error("連不到照片 Worker（可能是網路問題，或這個網址不在 Worker 允許的來源清單）");
+  }
 
   const payload = (await response.json().catch(() => null)) as { url?: string; error?: string } | null;
 
   if (!response.ok || !payload?.url) {
-    throw new Error(payload?.error || "照片上傳失敗");
+    throw new Error(payload?.error || `上傳被拒絕（${response.status}）`);
   }
 
   return payload.url;
@@ -164,13 +170,95 @@ async function uploadToStorage(blob: Blob, extension: string, userId: string): P
   return data.publicUrl;
 }
 
-export async function uploadCosplayPhoto(file: File, userId: string): Promise<string> {
+export type PhotoUploadResult = {
+  url: string;
+  /** true 代表 R2/Worker 上傳失敗，照片改存在後端自己的儲存空間 */
+  usedFallback: boolean;
+  /** 失敗原因（給使用者看的說明） */
+  reason?: string;
+};
+
+/**
+ * 上傳照片。
+ *
+ * 有設定 photoUploadUrl 時優先上傳到自己的儲存空間（Cloudflare R2）；
+ * 若失敗會自動改用後端內建的儲存空間，不讓使用者的照片存不進去，
+ * 並回報原因讓畫面顯示提醒。
+ */
+export async function uploadCosplayPhoto(file: File, userId: string): Promise<PhotoUploadResult> {
   const { blob, extension } = await preparePhoto(file);
 
-  // 有設定 photoUploadUrl 就存到自己的儲存空間（例如 Cloudflare R2）
   if (photoUploadUrl) {
-    return uploadToWorker(photoUploadUrl, blob);
+    try {
+      const url = await uploadToWorker(photoUploadUrl, blob);
+      return { url, usedFallback: false };
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+
+      console.warn("照片 Worker 上傳失敗，改用後端儲存空間：", error);
+
+      const url = await uploadToStorage(blob, extension, userId);
+
+      return { url, usedFallback: true, reason };
+    }
   }
 
-  return uploadToStorage(blob, extension, userId);
+  const url = await uploadToStorage(blob, extension, userId);
+
+  return { url, usedFallback: false };
+}
+
+/** 從後端儲存空間的公開網址取出物件路徑；不是本儲存空間的網址回傳 null */
+function storagePathFromUrl(photoUrl: string): string | null {
+  const marker = `/storage/v1/object/public/${BUCKET}/`;
+  const index = photoUrl.indexOf(marker);
+
+  if (index === -1) return null;
+
+  return decodeURIComponent(photoUrl.slice(index + marker.length));
+}
+
+async function deleteViaWorker(endpoint: string, photoUrl: string): Promise<void> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+
+  if (!token) return;
+
+  const response = await fetch(`${endpoint.replace(/\/$/, "")}/delete`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ url: photoUrl }),
+  });
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(payload?.error || "刪除照片失敗");
+  }
+}
+
+/**
+ * 刪除某張照片的檔案（刪除紀錄、或編輯時換掉照片後呼叫）。
+ *
+ * 安全規則：
+ * - 只刪「我們自己上傳的」檔案；使用者自己貼上的外部網址一律不動
+ * - 只刪自己資料夾底下的檔案（R2 由 Worker 判斷、後端儲存空間由資料庫政策擋）
+ */
+export async function deleteStoredPhoto(photoUrl: string, userId: string): Promise<void> {
+  if (!photoUrl) return;
+
+  if (photoUploadUrl) {
+    await deleteViaWorker(photoUploadUrl, photoUrl);
+    return;
+  }
+
+  const path = storagePathFromUrl(photoUrl);
+
+  if (!path || !path.startsWith(`${userId}/`)) return;
+
+  const { error } = await supabase.storage.from(BUCKET).remove([path]);
+
+  if (error) throw error;
 }

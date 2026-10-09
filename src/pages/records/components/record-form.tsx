@@ -90,10 +90,18 @@ export default function RecordForm({
 
     try {
       setUploading(true);
-      const url = await uploadCosplayPhoto(file, userId);
-      set("photo", url);
-    } catch {
-      toast.error(t("form.error.photoRead"));
+
+      const result = await uploadCosplayPhoto(file, userId);
+      set("photo", result.url);
+
+      if (result.usedFallback) {
+        toast.warning(t("form.warn.photoFallback", { reason: result.reason ?? "" }));
+      }
+    } catch (error) {
+      console.error("照片上傳失敗：", error);
+
+      const reason = error instanceof Error ? error.message : "";
+      toast.error(reason ? t("form.error.photoUpload", { reason }) : t("form.error.photoRead"));
     } finally {
       setUploading(false);
     }

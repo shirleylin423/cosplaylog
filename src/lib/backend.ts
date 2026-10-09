@@ -34,8 +34,14 @@ const overrideKey = override?.anonKey?.trim();
 export const backendUrl = overrideUrl || SUPABASE_URL;
 export const isUsingOwnBackend = Boolean(overrideUrl);
 
-/** 照片上傳端點；未設定時為空字串（改用後端內建的儲存空間） */
-export const photoUploadUrl = override?.photoUploadUrl?.trim() || "";
+const rawPhotoUploadUrl = override?.photoUploadUrl?.trim() || "";
+
+/**
+ * 照片上傳端點（例如 Cloudflare 的照片 Worker）。
+ * 格式不對（不是 http/https 開頭）時視為未設定，改用後端內建的儲存空間，
+ * 避免因為設定打錯字而讓照片上傳整個失敗。
+ */
+export const photoUploadUrl = /^https?:\/\//i.test(rawPhotoUploadUrl) ? rawPhotoUploadUrl : "";
 
 export const supabase = overrideUrl
   ? createClient<Database>(overrideUrl, overrideKey || SUPABASE_PUBLISHABLE_KEY, {

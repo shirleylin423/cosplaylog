@@ -128,6 +128,8 @@
   "form.error.uploadType": "只支援 jpg、png、webp、gif 格式的照片。",
   "form.error.save": "儲存失敗，請稍後再試。",
   "form.error.photoRead": "照片讀取失敗，請再試一次。",
+  "form.error.photoUpload": "照片上傳失敗：{{reason}}",
+  "form.warn.photoFallback": "照片已儲存，但改用後端空間（R2 上傳失敗：{{reason}}）",
   "form.toast.added": "已新增紀錄。",
   "form.toast.updated": "已更新紀錄。",
 

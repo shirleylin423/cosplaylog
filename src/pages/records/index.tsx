@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { CalendarDays, LayoutGrid, LogOut, User } from "lucide-react";
@@ -32,7 +32,7 @@ export default function RecordsPage() {
   const { themeKey, setThemeKey, theme } = useTheme();
   const { displayName } = useProfile(user?.id);
 
-  const { records, isLoading, addRecord, updateRecord, deleteRecord } = useRecords(user?.id);
+  const { records, isLoading, addRecord, updateRecord, deleteRecord, removePhotoIfUnused } = useRecords(user?.id);
 
   const [view, setView] = useState<View>("calendar");
   const [filter, setFilter] = useState(createDefaultFilter);
@@ -89,13 +89,23 @@ export default function RecordsPage() {
   }, [isLoading, records]);
 
   // 篩選改變時，月曆跟著跳到對應的月份
+  // （只有「年份真的被換掉」才跳月份，否則像「回到今天」「清除篩選」會被覆蓋成 1 月）
+  const previousFilterYear = useRef(filter.year);
+
   useEffect(() => {
+    const yearChanged = previousFilterYear.current !== filter.year;
+    previousFilterYear.current = filter.year;
+
     if (filter.mode === "month") {
       setDisplay({ year: filter.year, month: filter.month });
       return;
     }
     if (filter.mode === "year") {
-      setDisplay({ year: filter.year, month: 0 });
+      if (yearChanged) {
+        const now = new Date();
+        const isCurrentYear = filter.year === now.getFullYear();
+        setDisplay({ year: filter.year, month: isCurrentYear ? now.getMonth() : 0 });
+      }
       return;
     }
     if (filter.mode === "day" && filter.day) {
@@ -199,10 +209,17 @@ export default function RecordsPage() {
 
   async function handleSubmit(input: CosplayRecordInput) {
     if (editing) {
+      const previousPhoto = editing.photo;
       await updateRecord(editing.id, input);
-    } else {
-      await addRecord(input);
+
+      // 換了新照片就把舊的刪掉（沒有其他紀錄在用時）
+      if (previousPhoto && previousPhoto !== input.photo) {
+        await removePhotoIfUnused(previousPhoto, editing.id);
+      }
+      return;
     }
+
+    await addRecord(input);
   }
 
   async function handleLogout() {
