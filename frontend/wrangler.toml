@@ -1,6 +1,0 @@
-name = "cosplaylog"
-compatibility_date = "2026-10-07"
-
-[assets]
-directory = "./build"
-not_found_handling = "single-page-application"

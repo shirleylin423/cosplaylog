@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <link href="favicon.ico" rel="icon shortcut">
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <meta name="theme-color" content="#0b1026" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="攪拌紀錄" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <title>攪拌紀錄 · COSPLAY LOG</title>
+  <meta name="description" content="攪拌紀錄 · 個人 Cosplay 日記：以照片行事曆與典藏方格回顧每年的拍攝紀錄。" />
+</head>
+
+<body>
+  <div id="root"></div>
+
+  <!--
+    後端設定。
+    預設使用 Enter Cloud，不需要填寫。
+    若要把 App 接到「你自己的」後端，把下面這行的註解拿掉並填入你的設定即可，
+    不需要改任何程式碼，也不用重新建置。
+  -->
+  <script>
+    // window.__BACKEND__ = {
+    //   url: "https://你的專案.supabase.co",
+    //   anonKey: "你的 anon key",
+    // };
+  </script>
+
+  <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
+</html>
