@@ -88,14 +88,24 @@ export default function RecordsPage() {
     setReviewOpen(true);
   }, [isLoading, records]);
 
-  // 篩選改變時，月曆跟著跳到對應的月份
+    // 篩選改變時，月曆跟著跳到對應的月份
+  // （只有「年份真的被換掉」才跳月份，否則像「回到今天」「清除篩選」會被覆蓋成 1 月）
+  const previousFilterYear = useRef(filter.year);
+
   useEffect(() => {
+    const yearChanged = previousFilterYear.current !== filter.year;
+    previousFilterYear.current = filter.year;
+
     if (filter.mode === "month") {
       setDisplay({ year: filter.year, month: filter.month });
       return;
     }
     if (filter.mode === "year") {
-      setDisplay({ year: filter.year, month: 0 });
+      if (yearChanged) {
+        const now = new Date();
+        const isCurrentYear = filter.year === now.getFullYear();
+        setDisplay({ year: filter.year, month: isCurrentYear ? now.getMonth() : 0 });
+      }
       return;
     }
     if (filter.mode === "day" && filter.day) {
