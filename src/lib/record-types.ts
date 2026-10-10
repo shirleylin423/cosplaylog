@@ -6,10 +6,14 @@ export type CosplayRecord = {
   date: string;
   /** 角色名 */
   character: string;
+  /** 角色版本（例如：冬季ver.、泳裝ver.、原作ver.） */
+  characterVersion: string;
   /** 作品名 */
   series: string;
   /** 活動名稱 */
   event: string;
+  /** 場地 */
+  venue: string;
   /** 攝影師 */
   photographer: string;
   /** 拍攝類型 */
@@ -26,8 +30,10 @@ export type CosplayRecordInput = Omit<CosplayRecord, "id">;
 export const EMPTY_RECORD_INPUT: CosplayRecordInput = {
   date: "",
   character: "",
+  characterVersion: "",
   series: "",
   event: "",
+  venue: "",
   photographer: "",
   type: "",
   note: "",

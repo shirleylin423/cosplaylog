@@ -112,8 +112,10 @@ export default function RecordDetail({
 
             <div className="mb-4 space-y-2">
               <Row icon={CalendarDays} label={t("detail.date")} value={formatFull(record.date)} />
+              <Row icon={Tag} label={t("detail.characterVersion")} value={record.characterVersion} />
               <Row icon={Tag} label={t("detail.series")} value={record.series} />
               <Row icon={Tag} label={t("detail.event")} value={record.event} />
+              <Row icon={Tag} label={t("detail.venue")} value={record.venue} />
               <Row icon={Aperture} label={t("detail.photographer")} value={record.photographer} />
               <Row icon={Users} label={t("detail.type")} value={record.type} />
             </div>

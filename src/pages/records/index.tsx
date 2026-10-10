@@ -10,6 +10,7 @@ import { useProfile } from "@/hooks/use-profile";
 import { useRecords } from "@/hooks/use-records";
 import { useTheme } from "@/hooks/use-theme";
 import { buildTypeColorMap, collectShootTypes, loadCustomTypes, saveCustomTypes } from "@/lib/shoot-types";
+import { collectRecentTags, collectTags } from "@/lib/record-tags";
 import type { CosplayRecord, CosplayRecordInput } from "@/lib/record-types";
 
 import CalendarView from "./components/calendar-view";
@@ -129,6 +130,10 @@ export default function RecordsPage() {
     }
     return null;
   }, [filter, filtered]);
+
+  // 用過的標籤：表單只顯示最近 3 個，其餘在輸入時自動比對
+  const tagOptions = useMemo(() => collectTags(records), [records]);
+  const recentTags = useMemo(() => collectRecentTags(records, 3), [records]);
 
   // 年度回憶預設打開的年份：今年有紀錄就用今年，否則用最近有紀錄的那一年
   const reviewStartYear = useMemo(() => {
@@ -402,6 +407,8 @@ export default function RecordsPage() {
         userId={user.id}
         shootTypes={shootTypes}
         typeColorMap={typeColorMap}
+        tagOptions={tagOptions}
+        recentTags={recentTags}
         onAddShootType={addShootType}
         onSubmit={handleSubmit}
         onClose={() => setFormOpen(false)}

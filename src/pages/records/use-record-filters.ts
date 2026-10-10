@@ -43,8 +43,10 @@ export function matchesSearch(record: CosplayRecord, term: string): boolean {
 
   const haystack = [
     record.character,
+    record.characterVersion,
     record.series,
     record.event,
+    record.venue,
     record.photographer,
     record.note,
     record.type,

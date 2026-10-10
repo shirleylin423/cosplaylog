@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { Check, ImagePlus, Link as LinkIcon, Loader2, Plus, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Check, Hash, ImagePlus, Link as LinkIcon, Loader2, Plus, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -17,8 +17,10 @@ function emptyInput(defaultType: string): CosplayRecordInput {
   return {
     date: toISO(new Date()),
     character: "",
+    characterVersion: "",
     series: "",
     event: "",
+    venue: "",
     photographer: "",
     type: defaultType,
     note: "",
@@ -36,6 +38,8 @@ export default function RecordForm({
   shootTypes,
   onAddShootType,
   typeColorMap,
+  tagOptions,
+  recentTags,
 }: {
   open: boolean;
   editing: CosplayRecord | null;
@@ -45,6 +49,10 @@ export default function RecordForm({
   shootTypes: string[];
   onAddShootType: (type: string) => void;
   typeColorMap: Record<string, string>;
+  /** 所有用過的標籤（輸入時用來比對） */
+  tagOptions: string[];
+  /** 最近用過的標籤（表單上直接顯示，方便快速選） */
+  recentTags: string[];
 }) {
   const { t } = useTranslation();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -55,7 +63,24 @@ export default function RecordForm({
   const [customOpen, setCustomOpen] = useState(false);
   const [customType, setCustomType] = useState("");
   const [tagInput, setTagInput] = useState("");
+  const [tagInputFocused, setTagInputFocused] = useState(false);
   const [urlOpen, setUrlOpen] = useState(false);
+
+  /** 輸入標籤時，比對用過的標籤（例如打「委」就跳出「委託」） */
+  const tagSuggestions = useMemo(() => {
+    const query = tagInput.trim().replace(/^#/, "").toLowerCase();
+
+    if (!query) return [];
+
+    const available = tagOptions.filter((tag) => !form.tags.includes(tag));
+    // 開頭符合的排前面，再排「包含」的
+    const startsWith = available.filter((tag) => tag.toLowerCase().startsWith(query));
+    const contains = available.filter(
+      (tag) => !tag.toLowerCase().startsWith(query) && tag.toLowerCase().includes(query),
+    );
+
+    return [...startsWith, ...contains].slice(0, 6);
+  }, [tagInput, tagOptions, form.tags]);
 
   useEffect(() => {
     if (!open) return;
@@ -117,13 +142,17 @@ export default function RecordForm({
     setCustomType("");
   }
 
-  function addTag() {
-    const value = tagInput.trim().replace(/^#/, "");
-    if (!value) return;
+  function addTagValue(value: string) {
+    const tag = value.trim().replace(/^#/, "");
+    if (!tag) return;
 
     setForm((current) =>
-      current.tags.includes(value) ? current : { ...current, tags: [...current.tags, value] },
+      current.tags.includes(tag) ? current : { ...current, tags: [...current.tags, tag] },
     );
+  }
+
+  function addTag() {
+    addTagValue(tagInput);
     setTagInput("");
   }
 
@@ -148,8 +177,10 @@ export default function RecordForm({
     const payload: CosplayRecordInput = {
       ...form,
       character: form.character.trim(),
+      characterVersion: form.characterVersion.trim(),
       series: form.series.trim(),
       event: form.event.trim(),
+      venue: form.venue.trim(),
       photographer: form.photographer.trim(),
       note: form.note.trim(),
       tags: [...form.tags],
@@ -275,11 +306,11 @@ export default function RecordForm({
               />
             </div>
             <div>
-              <Label className="mb-1.5 block text-sm">{t("form.photographer")}</Label>
+              <Label className="mb-1.5 block text-sm">{t("form.characterVersion")}</Label>
               <Input
-                value={form.photographer}
-                onChange={(event) => set("photographer", event.target.value)}
-                placeholder={t("form.photographerPlaceholder")}
+                value={form.characterVersion}
+                onChange={(event) => set("characterVersion", event.target.value)}
+                placeholder={t("form.characterVersionPlaceholder")}
                 style={fieldStyle}
               />
             </div>
@@ -301,6 +332,27 @@ export default function RecordForm({
                 value={form.event}
                 onChange={(event) => set("event", event.target.value)}
                 placeholder={t("form.eventPlaceholder")}
+                style={fieldStyle}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="mb-1.5 block text-sm">{t("form.photographer")}</Label>
+              <Input
+                value={form.photographer}
+                onChange={(event) => set("photographer", event.target.value)}
+                placeholder={t("form.photographerPlaceholder")}
+                style={fieldStyle}
+              />
+            </div>
+            <div>
+              <Label className="mb-1.5 block text-sm">{t("form.venue")}</Label>
+              <Input
+                value={form.venue}
+                onChange={(event) => set("venue", event.target.value)}
+                placeholder={t("form.venuePlaceholder")}
                 style={fieldStyle}
               />
             </div>
@@ -394,19 +446,48 @@ export default function RecordForm({
             )}
 
             <div className="flex items-center gap-2">
-              <Input
-                value={tagInput}
-                onChange={(event) => setTagInput(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === ",") {
-                    event.preventDefault();
-                    addTag();
-                  }
-                }}
-                placeholder={t("form.tagsPlaceholder")}
-                className="rounded-full"
-                style={fieldStyle}
-              />
+              <div className="relative flex-1">
+                <Input
+                  value={tagInput}
+                  onChange={(event) => setTagInput(event.target.value)}
+                  onFocus={() => setTagInputFocused(true)}
+                  onBlur={() => setTagInputFocused(false)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === ",") {
+                      event.preventDefault();
+                      addTag();
+                    }
+                  }}
+                  placeholder={t("form.tagsPlaceholder")}
+                  className="rounded-full"
+                  style={fieldStyle}
+                />
+
+                {/* 輸入時自動比對用過的標籤（例如打「委」就跳出「委託」） */}
+                {tagInputFocused && tagSuggestions.length > 0 && (
+                  <div
+                    className="absolute inset-x-0 top-full z-50 mt-1 overflow-hidden rounded-xl"
+                    style={{ background: "var(--surface-solid)", border: "1px solid var(--surface-border)" }}
+                  >
+                    {tagSuggestions.map((tag) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onMouseDown={(event) => {
+                          event.preventDefault();
+                          addTagValue(tag);
+                          setTagInput("");
+                        }}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-[var(--accent-soft)]"
+                        style={{ color: "var(--text)" }}
+                      >
+                        <Hash size={13} style={{ color: "var(--accent)" }} />
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               <button
                 type="button"
                 onClick={addTag}
@@ -415,6 +496,42 @@ export default function RecordForm({
                 <Plus size={14} /> {t("form.tagsAdd")}
               </button>
             </div>
+
+            {/* 最近用過的標籤：點一下就能加入 */}
+            {recentTags.length > 0 && (
+              <div className="mt-3">
+                <div className="text-muted-foreground mb-1.5 text-xs">{t("form.tagsUsed")}</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {recentTags.map((tag) => {
+                    const active = form.tags.includes(tag);
+
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        disabled={active}
+                        onClick={() => addTagValue(tag)}
+                        className="rounded-full border px-2.5 py-1 text-xs transition-colors disabled:opacity-40"
+                        style={
+                          active
+                            ? {
+                                background: "var(--accent-soft)",
+                                color: "var(--accent)",
+                                borderColor: "var(--accent)",
+                              }
+                            : {
+                                color: "var(--text-muted)",
+                                borderColor: "var(--surface-border)",
+                              }
+                        }
+                      >
+                        #{tag}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           <div>
