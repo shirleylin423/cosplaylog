@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import CornerFlourish from "@/components/corner-flourish";
 import { parseISO } from "@/lib/date-utils";
 import { SHOOT_COUNT_TYPES } from "@/lib/shoot-types";
+import { topCounterpartLabelKey, type UserRole } from "@/lib/roles";
 import type { CosplayRecord } from "@/lib/record-types";
 
 function StatCard({
@@ -63,10 +64,12 @@ function round1(value: number) {
 
 export default function StatsSummary({
   records,
+  role,
   typeColorMap,
   onApplySearch,
 }: {
   records: CosplayRecord[];
+  role: UserRole;
   typeColorMap: Record<string, string>;
   onApplySearch: (term: string) => void;
 }) {
@@ -156,7 +159,7 @@ export default function StatsSummary({
         <StatCard
           icon={Aperture}
           deco={t("stats.topPhotographerDeco")}
-          label={t("stats.topPhotographer")}
+          label={t(topCounterpartLabelKey(role))}
           value={topPhotographer ? topPhotographer[0] : t("stats.none")}
           sub={
             topPhotographer

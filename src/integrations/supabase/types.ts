@@ -3370,6 +3370,7 @@ export type Database = {
           photo_url: string | null
           photographer: string
           record_date: string
+          role: string
           series_title: string
           shoot_type: string
           tags: string[]
@@ -3385,6 +3386,7 @@ export type Database = {
           photo_url?: string | null
           photographer?: string
           record_date: string
+          role?: string
           series_title?: string
           shoot_type: string
           tags?: string[]
@@ -3400,6 +3402,7 @@ export type Database = {
           photo_url?: string | null
           photographer?: string
           record_date?: string
+          role?: string
           series_title?: string
           shoot_type?: string
           tags?: string[]
@@ -3410,18 +3413,24 @@ export type Database = {
       }
       profiles: {
         Row: {
+          active_role: string
           created_at: string
           display_name: string
+          enabled_roles: string[]
           id: string
         }
         Insert: {
+          active_role?: string
           created_at?: string
           display_name?: string
+          enabled_roles?: string[]
           id: string
         }
         Update: {
+          active_role?: string
           created_at?: string
           display_name?: string
+          enabled_roles?: string[]
           id?: string
         }
         Relationships: []

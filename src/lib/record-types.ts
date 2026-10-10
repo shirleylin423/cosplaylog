@@ -1,7 +1,11 @@
 /** 攪拌紀錄的紀錄模型（畫面用的形狀，與資料庫欄位分開） */
 
+import type { UserRole } from "./roles";
+
 export type CosplayRecord = {
   id: string;
+  /** 這筆紀錄屬於哪個身分：coser（出角）或 photographer（拍攝） */
+  role: UserRole;
   /** YYYY-MM-DD */
   date: string;
   /** 角色名 */
@@ -28,6 +32,7 @@ export type CosplayRecord = {
 export type CosplayRecordInput = Omit<CosplayRecord, "id">;
 
 export const EMPTY_RECORD_INPUT: CosplayRecordInput = {
+  role: "coser",
   date: "",
   character: "",
   characterVersion: "",

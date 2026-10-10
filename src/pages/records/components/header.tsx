@@ -10,11 +10,14 @@ export default function RecordsHeader({
   onThemeChange,
   onAddRecord,
   onOpenReview,
+  onHome,
 }: {
   themeKey: ThemeKey;
   onThemeChange: (themeKey: ThemeKey) => void;
   onAddRecord: () => void;
   onOpenReview: () => void;
+  /** 點標題：回到月曆並清除篩選 */
+  onHome: () => void;
 }) {
   const { t } = useTranslation();
   const appName = t("common.appName");
@@ -29,7 +32,12 @@ export default function RecordsHeader({
         }}
       >
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
-          <div className="flex flex-col leading-none">
+          <button
+            type="button"
+            onClick={onHome}
+            title={t("records.backToCalendar")}
+            className="flex flex-col items-start leading-none transition-opacity hover:opacity-80"
+          >
             <h1 className="font-serif-tc text-2xl font-black tracking-wide sm:text-3xl">
               <span style={{ color: "var(--text)" }}>{appName.slice(0, 2)}</span>
               <span className="glow-accent" style={{ color: "var(--accent)" }}>
@@ -39,7 +47,7 @@ export default function RecordsHeader({
             <span className="font-deco text-muted-foreground mt-1 text-[10px] tracking-[0.3em] sm:text-xs">
               {t("common.appNameLatin")}
             </span>
-          </div>
+          </button>
 
           <div className="flex items-center gap-2">
             <ThemePicker themeKey={themeKey} onChange={onThemeChange} />

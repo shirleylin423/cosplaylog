@@ -55,10 +55,15 @@ create table if not exists public.cosplay_records (
 
 alter table public.cosplay_records enable row level security;
 
--- 較早建立的資料庫若還沒有這兩個欄位，下面這幾行會補上（已存在時完全不會有影響）
+-- 較早建立的資料庫若還沒有這些欄位，下面幾行會補上（已存在時完全不會有影響）
 alter table public.cosplay_records
   add column if not exists venue text not null default '',
-  add column if not exists character_version text not null default '';
+  add column if not exists character_version text not null default '',
+  add column if not exists role text not null default 'coser';
+
+alter table public.profiles
+  add column if not exists enabled_roles text[] not null default '{}',
+  add column if not exists active_role text not null default 'coser';
 
 create policy "records_select_own" on public.cosplay_records
   for select to authenticated using (auth.uid() = user_id);

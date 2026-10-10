@@ -9,12 +9,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toISO } from "@/lib/date-utils";
+import { counterpartLabelKey, counterpartPlaceholderKey, type UserRole } from "@/lib/roles";
 import { uploadCosplayPhoto, validatePhotoFile } from "@/lib/photo-storage";
 import type { CosplayRecord, CosplayRecordInput } from "@/lib/record-types";
 import ChineseDatePicker from "./chinese-date-picker";
 
-function emptyInput(defaultType: string): CosplayRecordInput {
+function emptyInput(defaultType: string, role: UserRole): CosplayRecordInput {
   return {
+    role,
     date: toISO(new Date()),
     character: "",
     characterVersion: "",
@@ -40,6 +42,7 @@ export default function RecordForm({
   typeColorMap,
   tagOptions,
   recentTags,
+  role,
 }: {
   open: boolean;
   editing: CosplayRecord | null;
@@ -53,11 +56,13 @@ export default function RecordForm({
   tagOptions: string[];
   /** 最近用過的標籤（表單上直接顯示，方便快速選） */
   recentTags: string[];
+  /** 目前身分：決定「對方」欄位要填攝影師還是 coser */
+  role: UserRole;
 }) {
   const { t } = useTranslation();
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const [form, setForm] = useState<CosplayRecordInput>(() => emptyInput(shootTypes[0] ?? "外拍"));
+  const [form, setForm] = useState<CosplayRecordInput>(() => emptyInput(shootTypes[0] ?? "外拍", role));
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [customOpen, setCustomOpen] = useState(false);
@@ -89,7 +94,7 @@ export default function RecordForm({
       const { id: _id, ...rest } = editing;
       setForm({ ...rest });
     } else {
-      setForm(emptyInput(shootTypes[0] ?? "外拍"));
+      setForm(emptyInput(shootTypes[0] ?? "外拍", role));
     }
 
     setCustomOpen(false);
@@ -161,14 +166,7 @@ export default function RecordForm({
   }
 
   async function submit() {
-    if (!form.photo.trim()) {
-      toast.error(t("form.error.photo"));
-      return;
-    }
-    if (!form.character.trim()) {
-      toast.error(t("form.error.character"));
-      return;
-    }
+    // 除了日期（用來放進月曆，會自動帶入今天）以外，其他欄位都可以留空
     if (!form.date) {
       toast.error(t("form.error.date"));
       return;
@@ -339,11 +337,11 @@ export default function RecordForm({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="mb-1.5 block text-sm">{t("form.photographer")}</Label>
+              <Label className="mb-1.5 block text-sm">{t(counterpartLabelKey(role))}</Label>
               <Input
                 value={form.photographer}
                 onChange={(event) => set("photographer", event.target.value)}
-                placeholder={t("form.photographerPlaceholder")}
+                placeholder={t(counterpartPlaceholderKey(role))}
                 style={fieldStyle}
               />
             </div>

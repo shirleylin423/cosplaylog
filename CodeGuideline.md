@@ -17,6 +17,7 @@ project-root/
       │   ├── auth/          # 登入狀態守門元件（RequireAuth）
       │   ├── theme-background.tsx  # 三主題背景（純 SVG）
       │   ├── theme-picker.tsx      # 主題挑選
+      │   └── role-switch.tsx       # 暱稱按鈕：切換身分（實際位於 pages/records/components）
       │   ├── install-app-button.tsx # 安裝成 App（含手動加入教學）
       │   ├── corner-flourish.tsx   # 卡片邊角花紋
       │   └── app-loading.tsx       # 品牌載入畫面
@@ -39,6 +40,8 @@ project-root/
       │   ├── photo-storage.ts   # 照片上傳
       │   ├── date-utils.ts      # 中文日期工具
       │   ├── shoot-types.ts     # 拍攝類型與配色
+      │   ├── roles.ts           # 身分（coser／攝影）定義與標籤
+      │   ├── record-tags.ts     # 標籤收集（近期／全部）
       │   ├── themes.ts          # 主題中繼資料
       │   └── auth-errors.ts     # 帳號錯誤訊息對應
       ├── pages/             # Application pages (each page in its own subdirectory)

@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import CornerFlourish from "@/components/corner-flourish";
 import { SHOOT_COUNT_TYPES } from "@/lib/shoot-types";
+import { topCounterpartLabelKey, type UserRole } from "@/lib/roles";
 import type { CosplayRecord } from "@/lib/record-types";
 import YearInReviewCarousel from "./year-in-review-carousel";
 
@@ -30,11 +31,13 @@ function StatBox({ icon: Icon, label, value, sub }: { icon: typeof Camera; label
  */
 export default function YearInReview({
   records,
+  role,
   startYear,
   typeColorMap,
   onClose,
 }: {
   records: CosplayRecord[];
+  role: UserRole;
   startYear: number;
   typeColorMap: Record<string, string>;
   onClose: () => void;
@@ -190,7 +193,7 @@ export default function YearInReview({
               <StatBox icon={Camera} label={t("review.statShoots")} value={stats.shoots} />
               <StatBox
                 icon={Aperture}
-                label={t("review.statTopPhotographer")}
+                label={t(topCounterpartLabelKey(role))}
                 value={stats.topPhotographer ? stats.topPhotographer[0] : t("review.statNone")}
                 sub={
                   stats.topPhotographer

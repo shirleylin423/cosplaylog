@@ -139,7 +139,7 @@ export default function PhotoWallView({
 
                 <div className="p-2.5">
                   <div className="font-serif-tc truncate text-sm font-semibold" style={{ color: "var(--text)" }}>
-                    {record.character}
+                    {record.character || t("record.untitled")}
                   </div>
 
                   {record.series && (

@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { formatFull } from "@/lib/date-utils";
+import { counterpartLabelKey } from "@/lib/roles";
 import type { CosplayRecord } from "@/lib/record-types";
 
 export default function RecordDetail({
@@ -107,7 +108,7 @@ export default function RecordDetail({
             <CornerFlourish position="br" size={46} />
 
             <h3 className="font-serif-tc mb-3 text-2xl font-bold" style={{ color: "var(--accent)" }}>
-              {record.character}
+              {record.character || t("record.untitled")}
             </h3>
 
             <div className="mb-4 space-y-2">
@@ -116,7 +117,7 @@ export default function RecordDetail({
               <Row icon={Tag} label={t("detail.series")} value={record.series} />
               <Row icon={Tag} label={t("detail.event")} value={record.event} />
               <Row icon={Tag} label={t("detail.venue")} value={record.venue} />
-              <Row icon={Aperture} label={t("detail.photographer")} value={record.photographer} />
+              <Row icon={Aperture} label={t(counterpartLabelKey(record.role))} value={record.photographer} />
               <Row icon={Users} label={t("detail.type")} value={record.type} />
             </div>
 
@@ -176,7 +177,7 @@ export default function RecordDetail({
               {t("detail.deleteTitle")}
             </AlertDialogTitle>
             <AlertDialogDescription className="text-muted-foreground">
-              {t("detail.deleteDesc", { character: record.character, date: formatFull(record.date) })}
+              {t("detail.deleteDesc", { character: record.character || t("record.untitled"), date: formatFull(record.date) })}
             </AlertDialogDescription>
           </AlertDialogHeader>
 

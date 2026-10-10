@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { CalendarDays, LayoutGrid, LogOut, User } from "lucide-react";
+import { CalendarDays, LayoutGrid, LogOut } from "lucide-react";
 
 import AppLoading from "@/components/app-loading";
 import ThemeBackground from "@/components/theme-background";
@@ -12,6 +12,7 @@ import { useTheme } from "@/hooks/use-theme";
 import { buildTypeColorMap, collectShootTypes, loadCustomTypes, saveCustomTypes } from "@/lib/shoot-types";
 import { collectRecentTags, collectTags } from "@/lib/record-tags";
 import type { CosplayRecord, CosplayRecordInput } from "@/lib/record-types";
+import { ROLE_ORDER, type UserRole } from "@/lib/roles";
 
 import CalendarView from "./components/calendar-view";
 import ExportRecordsButton from "./components/export-records-button";
@@ -20,6 +21,7 @@ import RecordsHeader from "./components/header";
 import PhotoWallView from "./components/photo-wall-view";
 import RecordDetail from "./components/record-detail";
 import RecordForm from "./components/record-form";
+import RoleSwitch from "./components/role-switch";
 import StatsSummary from "./components/stats-summary";
 import YearInReview from "./components/year-in-review";
 import { createDefaultFilter, useFilteredRecords } from "./use-record-filters";
@@ -31,7 +33,7 @@ export default function RecordsPage() {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { themeKey, setThemeKey, theme } = useTheme();
-  const { displayName } = useProfile(user?.id);
+  const { displayName, enabledRoles, activeRole, saveRoles } = useProfile(user?.id);
 
   const { records, isLoading, addRecord, updateRecord, deleteRecord, removePhotoIfUnused } = useRecords(user?.id);
 
@@ -48,10 +50,20 @@ export default function RecordsPage() {
   const [customTypes, setCustomTypes] = useState<string[]>(loadCustomTypes);
   const [isNarrow, setIsNarrow] = useState(() => typeof window !== "undefined" && window.innerWidth < 640);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [roleOverride, setRoleOverride] = useState<UserRole | null>(null);
 
-  const filtered = useFilteredRecords(records, filter, search);
+  // 目前身分（本機先反應，同時寫回帳號設定）
+  const currentRole: UserRole = roleOverride ?? activeRole;
 
-  const shootTypes = useMemo(() => collectShootTypes(records, customTypes), [records, customTypes]);
+  // 只顯示目前身分的紀錄（coser 看自己的出角紀錄、攝影看拍攝紀錄）
+  const roleRecords = useMemo(
+    () => records.filter((record) => record.role === currentRole),
+    [records, currentRole],
+  );
+
+  const filtered = useFilteredRecords(roleRecords, filter, search);
+
+  const shootTypes = useMemo(() => collectShootTypes(roleRecords, customTypes), [roleRecords, customTypes]);
   const typeColorMap = useMemo(
     () => buildTypeColorMap(shootTypes, theme.typeColors),
     [shootTypes, theme.typeColors],
@@ -75,7 +87,7 @@ export default function RecordsPage() {
     if (today.getMonth() !== 11 || today.getDate() !== 31) return;
 
     const year = today.getFullYear();
-    if (!records.some((record) => record.date.slice(0, 4) === String(year))) return;
+    if (!roleRecords.some((record) => record.date.slice(0, 4) === String(year))) return;
 
     const seenKey = `stir-diary:review-seen:${year}`;
 
@@ -87,7 +99,7 @@ export default function RecordsPage() {
     }
 
     setReviewOpen(true);
-  }, [isLoading, records]);
+  }, [isLoading, roleRecords]);
 
   // 篩選改變時，月曆跟著跳到對應的月份
   // （只有「年份真的被換掉」才跳月份，否則像「回到今天」「清除篩選」會被覆蓋成 1 月）
@@ -132,24 +144,24 @@ export default function RecordsPage() {
   }, [filter, filtered]);
 
   // 用過的標籤：表單只顯示最近 3 個，其餘在輸入時自動比對
-  const tagOptions = useMemo(() => collectTags(records), [records]);
-  const recentTags = useMemo(() => collectRecentTags(records, 3), [records]);
+  const tagOptions = useMemo(() => collectTags(roleRecords), [roleRecords]);
+  const recentTags = useMemo(() => collectRecentTags(roleRecords, 3), [roleRecords]);
 
   // 年度回憶預設打開的年份：今年有紀錄就用今年，否則用最近有紀錄的那一年
   const reviewStartYear = useMemo(() => {
     const currentYear = new Date().getFullYear();
 
-    if (records.some((record) => record.date.slice(0, 4) === String(currentYear))) {
+    if (roleRecords.some((record) => record.date.slice(0, 4) === String(currentYear))) {
       return currentYear;
     }
 
-    const years = records
+    const years = roleRecords
       .map((record) => Number(record.date.slice(0, 4)))
       .filter((year) => Number.isFinite(year) && year > 0)
       .sort((a, b) => b - a);
 
     return years.length ? years[0] : currentYear;
-  }, [records]);
+  }, [roleRecords]);
 
   const activeMonth = filter.mode === "month" ? filter.month : null;
 
@@ -188,6 +200,36 @@ export default function RecordsPage() {
       year: Number(iso.slice(0, 4)),
       day: iso,
     });
+  }
+
+  /** 切換目前身分（同時寫回帳號設定，換裝置也一樣） */
+  async function changeRole(role: UserRole) {
+    setRoleOverride(role);
+
+    try {
+      await saveRoles(enabledRoles, role);
+    } catch (error) {
+      console.error("儲存身分設定失敗：", error);
+    }
+  }
+
+  /** 啟用／關閉某個身分；至少要保留一個 */
+  async function toggleRole(role: UserRole, enabled: boolean) {
+    const nextEnabled = enabled
+      ? ROLE_ORDER.filter((item) => item === role || enabledRoles.includes(item))
+      : enabledRoles.filter((item) => item !== role);
+
+    if (nextEnabled.length === 0) return;
+
+    const nextActive = nextEnabled.includes(currentRole) ? currentRole : nextEnabled[0];
+
+    setRoleOverride(nextActive);
+
+    try {
+      await saveRoles(nextEnabled, nextActive);
+    } catch (error) {
+      console.error("儲存身分設定失敗：", error);
+    }
   }
 
   /** 回到今天：重設篩選並把月曆移回當月 */
@@ -298,17 +340,19 @@ export default function RecordsPage() {
           setFormOpen(true);
         }}
         onOpenReview={() => setReviewOpen(true)}
+        onHome={handleClear}
       />
 
       {/* 登入者資訊列 */}
       <div className="mx-auto max-w-6xl px-4 pt-3 sm:px-6">
         <div className="flex flex-wrap items-center justify-end gap-3">
-          <div className="flex items-center gap-2 text-sm" style={{ color: "var(--text)" }}>
-            <User size={15} />
-            <span className="max-w-[220px] truncate" title={accountName}>
-              {accountName}
-            </span>
-          </div>
+          <RoleSwitch
+            displayName={accountName}
+            enabledRoles={enabledRoles}
+            activeRole={currentRole}
+            onChangeRole={changeRole}
+            onToggleRole={toggleRole}
+          />
 
           <ExportRecordsButton
             records={records}
@@ -360,10 +404,10 @@ export default function RecordsPage() {
               <ViewToggle />
             </div>
 
-            <StatsSummary records={filtered} typeColorMap={typeColorMap} onApplySearch={applySearch} />
+            <StatsSummary records={filtered} role={currentRole} typeColorMap={typeColorMap} onApplySearch={applySearch} />
 
             <FilterBar
-              records={records}
+              records={roleRecords}
               filter={filter}
               setFilter={handleFilter}
               count={filtered.length}
@@ -407,6 +451,7 @@ export default function RecordsPage() {
         userId={user.id}
         shootTypes={shootTypes}
         typeColorMap={typeColorMap}
+        role={currentRole}
         tagOptions={tagOptions}
         recentTags={recentTags}
         onAddShootType={addShootType}
@@ -429,7 +474,8 @@ export default function RecordsPage() {
 
       {reviewOpen && (
         <YearInReview
-          records={records}
+          records={roleRecords}
+          role={currentRole}
           startYear={reviewStartYear}
           typeColorMap={typeColorMap}
           onClose={() => setReviewOpen(false)}

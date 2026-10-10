@@ -13,6 +13,7 @@ const TABLE = "cosplay_records";
 type RecordRow = {
   id: string;
   user_id: string;
+  role: string | null;
   record_date: string;
   character_name: string;
   character_version: string | null;
@@ -29,6 +30,7 @@ type RecordRow = {
 function rowToRecord(row: RecordRow): CosplayRecord {
   return {
     id: row.id,
+    role: row.role === "photographer" ? "photographer" : "coser",
     date: row.record_date,
     character: row.character_name,
     characterVersion: row.character_version ?? "",
@@ -46,6 +48,7 @@ function rowToRecord(row: RecordRow): CosplayRecord {
 function inputToRow(record: CosplayRecordInput, userId: string) {
   return {
     user_id: userId,
+    role: record.role === "photographer" ? "photographer" : "coser",
     record_date: record.date,
     character_name: record.character,
     character_version: record.characterVersion ?? "",
@@ -88,6 +91,7 @@ export async function updateRecord(id: string, record: CosplayRecordInput): Prom
   const { data, error } = await supabase
     .from(TABLE)
     .update({
+      role: record.role === "photographer" ? "photographer" : "coser",
       record_date: record.date,
       character_name: record.character,
       character_version: record.characterVersion ?? "",
