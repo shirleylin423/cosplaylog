@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { CalendarDays, LayoutGrid, LogOut } from "lucide-react";
+import { CalendarDays, LayoutGrid, LogOut, Trash2 } from "lucide-react";
 
 import AppLoading from "@/components/app-loading";
 import ThemeBackground from "@/components/theme-background";
@@ -11,6 +11,7 @@ import { useProfile } from "@/hooks/use-profile";
 import { useRecords } from "@/hooks/use-records";
 import { useTheme } from "@/hooks/use-theme";
 import { buildTypeColorMap, collectShootTypes, loadCustomTypes, saveCustomTypes } from "@/lib/shoot-types";
+import { cleanupUnusedPhotos } from "@/lib/photo-storage";
 import { collectRecentTags, collectTags } from "@/lib/record-tags";
 import { averagePeriodForFilter } from "@/lib/stats";
 import type { CosplayRecord, CosplayRecordInput } from "@/lib/record-types";
@@ -204,6 +205,27 @@ export default function RecordsPage() {
     });
   }
 
+  /** 清理未使用的照片：把沒有任何紀錄用到的檔案刪掉，回收容量 */
+  async function handleCleanupPhotos() {
+    if (!user) return;
+
+    // 所有身分的照片都要保留
+    const keep = records.map((record) => record.photo).filter(Boolean);
+
+    try {
+      const deleted = await cleanupUnusedPhotos(keep, user.id);
+
+      if (deleted > 0) {
+        toast.success(t("cleanup.done", { count: deleted }));
+      } else {
+        toast.info(t("cleanup.none"));
+      }
+    } catch (error) {
+      console.error("清理照片失敗：", error);
+      toast.error(t("cleanup.failed"));
+    }
+  }
+
   /** 切換目前身分（同時寫回帳號設定，換裝置也一樣） */
   async function changeRole(role: UserRole) {
     setRoleOverride(role);
@@ -362,6 +384,17 @@ export default function RecordsPage() {
             records={records}
             account={{ id: user.id, email: user.email ?? "", displayName: accountName }}
           />
+
+          <button
+            type="button"
+            onClick={handleCleanupPhotos}
+            className="font-serif-tc flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm transition-opacity hover:opacity-70"
+            style={{ background: "var(--accent-soft)", color: "var(--text)" }}
+            title={t("cleanup.hint")}
+          >
+            <Trash2 size={15} />
+            {t("cleanup.button")}
+          </button>
 
           <button
             type="button"

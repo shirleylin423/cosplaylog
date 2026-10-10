@@ -3,6 +3,7 @@
 // 端點：
 //   POST /          上傳照片
 //   POST /delete    刪除照片（body 是 { "url": "照片公開網址" }）
+//   POST /cleanup   清理未使用照片（body 是 { "keep": ["照片網址", ...] }）
 //
 // 需要的環境變數：SUPABASE_URL、SUPABASE_ANON_KEY、PUBLIC_BASE_URL
 // 需要的綁定：任何名稱的 R2 bucket（程式會自動找到）
@@ -65,6 +66,42 @@ function extensionFor(contentType) {
   if (contentType.includes("gif")) return "gif";
   if (contentType.includes("jpeg") || contentType.includes("jpg")) return "jpg";
   return "webp";
+}
+
+/** 清理：刪掉該使用者資料夾底下、沒有被任何紀錄使用的照片 */
+async function handleCleanup(request, env, userId, cors) {
+  let payload = null;
+
+  try {
+    payload = await request.json();
+  } catch {
+    payload = null;
+  }
+
+  const base = publicBase(env);
+  const keep = new Set(
+    (Array.isArray(payload?.keep) ? payload.keep : [])
+      .map((url) => (typeof url === "string" && base && url.startsWith(`${base}/`) ? decodeURIComponent(url.slice(base.length + 1)) : ""))
+      .filter(Boolean),
+  );
+
+  const deleted = [];
+  let cursor;
+
+  do {
+    const listed = await env.PHOTOS.list({ prefix: `${userId}/`, cursor });
+
+    for (const object of listed.objects) {
+      if (!keep.has(object.key)) {
+        await env.PHOTOS.delete(object.key);
+        deleted.push(object.key);
+      }
+    }
+
+    cursor = listed.truncated ? listed.cursor : undefined;
+  } while (cursor);
+
+  return json({ ok: true, deleted: deleted.length, keys: deleted.slice(0, 50) }, 200, cors);
 }
 
 export default {

@@ -249,16 +249,80 @@ async function deleteViaWorker(endpoint: string, photoUrl: string): Promise<void
 export async function deleteStoredPhoto(photoUrl: string, userId: string): Promise<void> {
   if (!photoUrl) return;
 
-  if (photoUploadUrl) {
-    await deleteViaWorker(photoUploadUrl, photoUrl);
+  // 1) 存在後端儲存空間（Supabase）的照片：直接用後端 API 刪
+  const path = storagePathFromUrl(photoUrl);
+
+  if (path) {
+    if (!path.startsWith(`${userId}/`)) return;
+
+    const { error } = await supabase.storage.from(BUCKET).remove([path]);
+    if (error) throw error;
     return;
   }
 
-  const path = storagePathFromUrl(photoUrl);
+  // 2) 存在自己的照片空間（R2）：交給 Worker 判斷與刪除
+  if (photoUploadUrl) {
+    await deleteViaWorker(photoUploadUrl, photoUrl);
+  }
 
-  if (!path || !path.startsWith(`${userId}/`)) return;
+  // 3) 其他（使用者自己貼上的外部網址）：不動
+}
 
-  const { error } = await supabase.storage.from(BUCKET).remove([path]);
+/** 清理後端儲存空間裡沒有被任何紀錄使用的照片 */
+async function cleanupBackendPhotos(userId: string, keepPaths: Set<string>): Promise<number> {
+  const { data, error } = await supabase.storage.from(BUCKET).list(userId, { limit: 1000 });
 
-  if (error) throw error;
+  if (error || !data) return 0;
+
+  const unused = data
+    .map((item) => `${userId}/${item.name}`)
+    .filter((path) => !keepPaths.has(path));
+
+  if (unused.length === 0) return 0;
+
+  const { error: removeError } = await supabase.storage.from(BUCKET).remove(unused);
+
+  return removeError ? 0 : unused.length;
+}
+
+/**
+ * 清理未使用的照片：把「目前所有紀錄都沒用到」的檔案刪掉，回收容量。
+ * 會同時清理自己的照片空間（R2）與後端儲存空間。
+ */
+export async function cleanupUnusedPhotos(keepUrls: string[], userId: string): Promise<number> {
+  const keepPaths = new Set(
+    keepUrls.map((url) => storagePathFromUrl(url)).filter((path): path is string => Boolean(path)),
+  );
+
+  const backendDeleted = await cleanupBackendPhotos(userId, keepPaths);
+
+  if (!photoUploadUrl) return backendDeleted;
+
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+
+  if (!token) throw new Error("登入狀態已失效，請重新登入");
+
+  let response: Response;
+
+  try {
+    response = await fetch(`${photoUploadUrl.replace(/\/$/, "")}/cleanup`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ keep: keepUrls }),
+    });
+  } catch {
+    throw new Error("連不到照片 Worker");
+  }
+
+  const payload = (await response.json().catch(() => null)) as { deleted?: number; error?: string } | null;
+
+  if (!response.ok) {
+    throw new Error(payload?.error || "清理失敗");
+  }
+
+  return (Number(payload?.deleted) || 0) + backendDeleted;
 }
