@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Aperture, Camera, ChevronLeft, ChevronRight, Images, Sparkles, Star, X } from "lucide-react";
+import { Aperture, Camera, ChevronLeft, ChevronRight, Images, Sparkles, Star, TrendingUp, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import CornerFlourish from "@/components/corner-flourish";
 import { SHOOT_COUNT_TYPES } from "@/lib/shoot-types";
-import { topCounterpartLabelKey, type UserRole } from "@/lib/roles";
+import { computeAverage, monthsInYear, topPerson } from "@/lib/stats";
+import { topCharacterLabelKey, topCounterpartLabelKey, type UserRole } from "@/lib/roles";
 import type { CosplayRecord } from "@/lib/record-types";
 import YearInReviewCarousel from "./year-in-review-carousel";
 
@@ -64,23 +65,18 @@ export default function YearInReview({
 
   const stats = useMemo(() => {
     const appearances = yearRecords.length;
-    const shoots = yearRecords.filter((record) => SHOOT_COUNT_TYPES.has(record.type)).length;
-
-    const topEntry = (key: "photographer" | "character" | "type") => {
-      const counts: Record<string, number> = {};
-      yearRecords.forEach((record) => {
-        const value = record[key];
-        if (value) counts[value] = (counts[value] || 0) + 1;
-      });
-      const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-      return entries.length ? entries[0] : null;
-    };
+    // coser 的「拍攝次數」只計外拍／棚拍／活動／同人場；攝影身分則計所有紀錄
+    const shoots =
+      role === "photographer"
+        ? appearances
+        : yearRecords.filter((record) => SHOOT_COUNT_TYPES.has(record.type)).length;
 
     return {
       appearances,
       shoots,
-      topPhotographer: topEntry("photographer"),
-      topCharacter: topEntry("character"),
+      // 以「單人」計算：多人共用一筆紀錄時每個人都各算一次
+      topPhotographer: topPerson(yearRecords, "photographer"),
+      topCharacter: topPerson(yearRecords, "character"),
       typeCounts: Object.entries(
         yearRecords.reduce<Record<string, number>>((acc, record) => {
           if (record.type) acc[record.type] = (acc[record.type] || 0) + 1;
@@ -89,7 +85,13 @@ export default function YearInReview({
       ).sort((a, b) => b[1] - a[1]),
       months: new Set(yearRecords.map((record) => record.date.slice(5, 7))).size,
     };
-  }, [yearRecords]);
+  }, [yearRecords, role]);
+
+  // 年度回憶固定看一整年 → 一律用平均每月（今年的話只算到現在）
+  const average = useMemo(
+    () => computeAverage(yearRecords, { unit: "month", length: monthsInYear(year) }),
+    [yearRecords, year],
+  );
 
   // 精選：每個月挑第一筆，最多 12 張，依時間排序
   const featured = useMemo(() => {
@@ -189,8 +191,30 @@ export default function YearInReview({
           <>
             {/* 年度統計 */}
             <section className="anim-fade-up mt-8 grid grid-cols-2 gap-3 sm:gap-4">
-              <StatBox icon={Images} label={t("review.statAppearances")} value={stats.appearances} />
-              <StatBox icon={Camera} label={t("review.statShoots")} value={stats.shoots} />
+              {role === "photographer" ? (
+                <>
+                  <StatBox icon={Camera} label={t("review.statShoots")} value={stats.shoots} />
+                  <StatBox
+                    icon={TrendingUp}
+                    label={t("stats.avgShoots")}
+                    value={
+                      average ? (
+                        <span>
+                          {t(average.unitKey)}{" "}
+                          <span style={{ fontSize: "1.3em" }}>{average.value}</span> {t("stats.avgTimes")}
+                        </span>
+                      ) : (
+                        t("review.statNone")
+                      )
+                    }
+                  />
+                </>
+              ) : (
+                <>
+                  <StatBox icon={Images} label={t("review.statAppearances")} value={stats.appearances} />
+                  <StatBox icon={Camera} label={t("review.statShoots")} value={stats.shoots} />
+                </>
+              )}
               <StatBox
                 icon={Aperture}
                 label={t(topCounterpartLabelKey(role))}
@@ -203,7 +227,7 @@ export default function YearInReview({
               />
               <StatBox
                 icon={Star}
-                label={t("review.statTopCharacter")}
+                label={t(topCharacterLabelKey(role))}
                 value={stats.topCharacter ? stats.topCharacter[0] : t("review.statNone")}
                 sub={stats.topCharacter ? `${stats.topCharacter[1]} ${t("review.statTimes")}` : undefined}
               />

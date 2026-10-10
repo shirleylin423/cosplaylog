@@ -3367,6 +3367,7 @@ export type Database = {
           event_name: string
           id: string
           note: string
+          person_count: number
           photo_url: string | null
           photographer: string
           record_date: string
@@ -3383,6 +3384,7 @@ export type Database = {
           event_name?: string
           id?: string
           note?: string
+          person_count?: number
           photo_url?: string | null
           photographer?: string
           record_date: string
@@ -3399,6 +3401,7 @@ export type Database = {
           event_name?: string
           id?: string
           note?: string
+          person_count?: number
           photo_url?: string | null
           photographer?: string
           record_date?: string

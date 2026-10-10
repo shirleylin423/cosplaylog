@@ -59,7 +59,8 @@ alter table public.cosplay_records enable row level security;
 alter table public.cosplay_records
   add column if not exists venue text not null default '',
   add column if not exists character_version text not null default '',
-  add column if not exists role text not null default 'coser';
+  add column if not exists role text not null default 'coser',
+  add column if not exists person_count integer not null default 1;
 
 alter table public.profiles
   add column if not exists enabled_roles text[] not null default '{}',

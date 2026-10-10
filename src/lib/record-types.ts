@@ -12,6 +12,8 @@ export type CosplayRecord = {
   character: string;
   /** 角色版本（例如：冬季ver.、泳裝ver.、原作ver.） */
   characterVersion: string;
+  /** 拍攝人數（攝影身分常用；角色名可用「、」分隔填多個） */
+  personCount: number;
   /** 作品名 */
   series: string;
   /** 活動名稱 */
@@ -36,6 +38,7 @@ export const EMPTY_RECORD_INPUT: CosplayRecordInput = {
   date: "",
   character: "",
   characterVersion: "",
+  personCount: 1,
   series: "",
   event: "",
   venue: "",

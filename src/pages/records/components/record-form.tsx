@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toISO } from "@/lib/date-utils";
-import { counterpartLabelKey, counterpartPlaceholderKey, type UserRole } from "@/lib/roles";
+import { counterpartLabelKey, counterpartPlaceholderKeyMulti, type UserRole } from "@/lib/roles";
 import { uploadCosplayPhoto, validatePhotoFile } from "@/lib/photo-storage";
 import type { CosplayRecord, CosplayRecordInput } from "@/lib/record-types";
 import ChineseDatePicker from "./chinese-date-picker";
@@ -293,16 +293,30 @@ export default function RecordForm({
             </div>
           </div>
 
+          {/* 角色 / 對方（coser 模式＝攝影師、攝影模式＝coser） */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="mb-1.5 block text-sm">{t("form.character")}</Label>
               <Input
                 value={form.character}
                 onChange={(event) => set("character", event.target.value)}
-                placeholder={t("form.characterPlaceholder")}
+                placeholder={t(role === "photographer" ? "form.characterPlaceholderMulti" : "form.characterPlaceholder")}
                 style={fieldStyle}
               />
             </div>
+            <div>
+              <Label className="mb-1.5 block text-sm">{t(counterpartLabelKey(role))}</Label>
+              <Input
+                value={form.photographer}
+                onChange={(event) => set("photographer", event.target.value)}
+                placeholder={t(counterpartPlaceholderKeyMulti(role))}
+                style={fieldStyle}
+              />
+            </div>
+          </div>
+
+          {/* 角色版本 / 作品名 */}
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="mb-1.5 block text-sm">{t("form.characterVersion")}</Label>
               <Input
@@ -312,9 +326,6 @@ export default function RecordForm({
                 style={fieldStyle}
               />
             </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="mb-1.5 block text-sm">{t("form.series")}</Label>
               <Input
@@ -324,24 +335,16 @@ export default function RecordForm({
                 style={fieldStyle}
               />
             </div>
+          </div>
+
+          {/* 活動名稱 / 場地 */}
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="mb-1.5 block text-sm">{t("form.event")}</Label>
               <Input
                 value={form.event}
                 onChange={(event) => set("event", event.target.value)}
                 placeholder={t("form.eventPlaceholder")}
-                style={fieldStyle}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="mb-1.5 block text-sm">{t(counterpartLabelKey(role))}</Label>
-              <Input
-                value={form.photographer}
-                onChange={(event) => set("photographer", event.target.value)}
-                placeholder={t(counterpartPlaceholderKey(role))}
                 style={fieldStyle}
               />
             </div>
@@ -355,6 +358,31 @@ export default function RecordForm({
               />
             </div>
           </div>
+
+          {/* 人數（僅攝影身分）：自己輸入數字，不佔一整行 */}
+          {role === "photographer" && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="mb-1.5 block text-sm">{t("form.personCount")}</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={99}
+                    value={String(form.personCount)}
+                    onChange={(event) => {
+                      const next = Number(event.target.value);
+                      set("personCount", Number.isFinite(next) && next > 0 ? Math.floor(next) : 1);
+                    }}
+                    className="w-20 text-center"
+                    style={fieldStyle}
+                  />
+                  <span className="text-muted-foreground text-sm">{t("form.personCountUnit")}</span>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* 拍攝類型 */}
           <div>

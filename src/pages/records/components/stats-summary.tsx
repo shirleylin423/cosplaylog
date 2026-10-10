@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
-import { Aperture, Camera, Images, Search, TrendingUp } from "lucide-react";
+import { Aperture, Camera, Images, Search, Star, TrendingUp } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import CornerFlourish from "@/components/corner-flourish";
-import { parseISO } from "@/lib/date-utils";
 import { SHOOT_COUNT_TYPES } from "@/lib/shoot-types";
-import { topCounterpartLabelKey, type UserRole } from "@/lib/roles";
+import { computeAverage, topPerson, type AveragePeriod } from "@/lib/stats";
+import { topCharacterDecoKey, topCharacterLabelKey, topCounterpartDecoKey, topCounterpartLabelKey, type UserRole } from "@/lib/roles";
 import type { CosplayRecord } from "@/lib/record-types";
 
 function StatCard({
@@ -57,117 +57,138 @@ function StatCard({
   );
 }
 
-function round1(value: number) {
-  const rounded = Math.round(value * 10) / 10;
-  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
-}
-
 export default function StatsSummary({
   records,
   role,
+  averagePeriod,
   typeColorMap,
   onApplySearch,
 }: {
   records: CosplayRecord[];
   role: UserRole;
+  /** 目前檢視的範圍決定平均的單位與期間長度：年 → 每月，月／日／區間 → 每週 */
+  averagePeriod: AveragePeriod;
   typeColorMap: Record<string, string>;
   onApplySearch: (term: string) => void;
 }) {
   const { t } = useTranslation();
+  const isPhotographer = role === "photographer";
 
-  // 出角次數：每筆紀錄算一次
-  const appearances = records.length;
-  // 拍攝次數：只計外拍／棚拍／活動／同人場
-  const shootCount = records.filter((record) => SHOOT_COUNT_TYPES.has(record.type)).length;
+  const total = records.length;
+  // coser 的「拍攝次數」只計外拍／棚拍／活動／同人場；攝影身分則計所有登錄的紀錄
+  const shootCount = isPhotographer
+    ? total
+    : records.filter((record) => SHOOT_COUNT_TYPES.has(record.type)).length;
 
-  // 平均出角次數（依實際紀錄的頻率自動換算單位）
-  let avgUnit = "";
-  let avgNumber = "—";
+  // 平均次數（依實際紀錄的頻率自動換算單位）
+  const average = computeAverage(records, averagePeriod);
 
-  if (appearances > 0) {
-    const dates = records
-      .map((record) => parseISO(record.date))
-      .filter((date): date is Date => Boolean(date))
-      .sort((a, b) => a.getTime() - b.getTime());
-
-    const monthsCovered = new Set(records.map((record) => record.date.slice(0, 7))).size;
-
-    if (monthsCovered <= 1 && dates.length > 0) {
-      const spanDays = Math.round((dates[dates.length - 1].getTime() - dates[0].getTime()) / 86400000) + 1;
-      const weeks = Math.max(1, spanDays / 7);
-      avgUnit = t("stats.avgWeekly");
-      avgNumber = round1(appearances / weeks);
-    } else {
-      avgUnit = t("stats.avgMonthly");
-      avgNumber = round1(appearances / Math.max(1, monthsCovered));
-    }
-  }
-
-  const countBy = (key: "photographer" | "type") => {
+  const countTypes = () => {
     const map: Record<string, number> = {};
     records.forEach((record) => {
-      const value = record[key];
-      if (value) map[value] = (map[value] || 0) + 1;
+      if (record.type) map[record.type] = (map[record.type] || 0) + 1;
     });
     return map;
   };
 
-  const topEntry = (map: Record<string, number>) => {
-    const entries = Object.entries(map).sort((a, b) => b[1] - a[1]);
-    return entries.length ? entries[0] : null;
-  };
+  // 以「單人」計算：多人共用一筆紀錄時每個人都各算一次
+  const topCounterpart = topPerson(records, "photographer");
+  const topCharacter = topPerson(records, "character");
+  const typeCounts = countTypes();
 
-  const topPhotographer = topEntry(countBy("photographer"));
-  const typeCounts = countBy("type");
+  const avgNode = average ? (
+    <span>
+      {t(average.unitKey)} <span style={{ fontSize: "1.3em" }}>{average.value}</span> {t("stats.avgTimes")}
+    </span>
+  ) : (
+    t("stats.none")
+  );
 
   return (
     <section className="space-y-4">
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <StatCard
-          icon={Camera}
-          deco={t("stats.totalShootsDeco")}
-          label={t("stats.totalShoots")}
-          value={shootCount}
-          sub={t("stats.totalShootsSub")}
-        />
+        {isPhotographer ? (
+          <>
+            {/* 攝影身分：只看拍攝相關的統計 */}
+            <StatCard
+              icon={Camera}
+              deco={t("stats.totalShootsDeco")}
+              label={t("stats.totalShoots")}
+              value={shootCount}
+            />
 
-        <StatCard
-          icon={Images}
-          deco={t("stats.appearancesDeco")}
-          label={t("stats.appearances")}
-          value={appearances}
-          sub={t("stats.appearancesSub", { count: appearances })}
-        />
+            <StatCard
+              icon={TrendingUp}
+              deco={t("stats.avgShootsDeco")}
+              label={t("stats.avgShoots")}
+              compact
+              value={avgNode}
+              sub={total > 0 ? t("stats.avgShootsSub", { count: total }) : t("stats.empty")}
+            />
 
-        <StatCard
-          icon={TrendingUp}
-          deco={t("stats.avgDeco")}
-          label={t("stats.avg")}
-          compact
-          value={
-            appearances > 0 ? (
-              <span>
-                {avgUnit} <span style={{ fontSize: "1.3em" }}>{avgNumber}</span> {t("stats.avgTimes")}
-              </span>
-            ) : (
-              t("stats.none")
-            )
-          }
-          sub={appearances > 0 ? t("stats.avgSub", { count: appearances }) : t("stats.empty")}
-        />
+            <StatCard
+              icon={Aperture}
+              deco={t(topCounterpartDecoKey(role))}
+              label={t(topCounterpartLabelKey(role))}
+              value={topCounterpart ? topCounterpart[0] : t("stats.none")}
+              sub={
+                topCounterpart
+                  ? t("stats.topPhotographerSub", { count: topCounterpart[1] })
+                  : t("stats.empty")
+              }
+              onClick={topCounterpart ? () => onApplySearch(topCounterpart[0]) : undefined}
+            />
 
-        <StatCard
-          icon={Aperture}
-          deco={t("stats.topPhotographerDeco")}
-          label={t(topCounterpartLabelKey(role))}
-          value={topPhotographer ? topPhotographer[0] : t("stats.none")}
-          sub={
-            topPhotographer
-              ? t("stats.topPhotographerSub", { count: topPhotographer[1] })
-              : t("stats.empty")
-          }
-          onClick={topPhotographer ? () => onApplySearch(topPhotographer[0]) : undefined}
-        />
+            <StatCard
+              icon={Star}
+              deco={t(topCharacterDecoKey())}
+              label={t(topCharacterLabelKey(role))}
+              value={topCharacter ? topCharacter[0] : t("stats.none")}
+              sub={topCharacter ? t("stats.topPhotographerSub", { count: topCharacter[1] }) : t("stats.empty")}
+              onClick={topCharacter ? () => onApplySearch(topCharacter[0]) : undefined}
+            />
+          </>
+        ) : (
+          <>
+            <StatCard
+              icon={Camera}
+              deco={t("stats.totalShootsDeco")}
+              label={t("stats.totalShoots")}
+              value={shootCount}
+              sub={t("stats.totalShootsSub")}
+            />
+
+            <StatCard
+              icon={Images}
+              deco={t("stats.appearancesDeco")}
+              label={t("stats.appearances")}
+              value={total}
+              sub={t("stats.appearancesSub", { count: total })}
+            />
+
+            <StatCard
+              icon={TrendingUp}
+              deco={t("stats.avgDeco")}
+              label={t("stats.avg")}
+              compact
+              value={avgNode}
+              sub={total > 0 ? t("stats.avgSub", { count: total }) : t("stats.empty")}
+            />
+
+            <StatCard
+              icon={Aperture}
+              deco={t(topCounterpartDecoKey(role))}
+              label={t(topCounterpartLabelKey(role))}
+              value={topCounterpart ? topCounterpart[0] : t("stats.none")}
+              sub={
+                topCounterpart
+                  ? t("stats.topPhotographerSub", { count: topCounterpart[1] })
+                  : t("stats.empty")
+              }
+              onClick={topCounterpart ? () => onApplySearch(topCounterpart[0]) : undefined}
+            />
+          </>
+        )}
       </div>
 
       {Object.keys(typeCounts).length > 0 && (

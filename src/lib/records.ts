@@ -17,6 +17,7 @@ type RecordRow = {
   record_date: string;
   character_name: string;
   character_version: string | null;
+  person_count: number | null;
   series_title: string;
   event_name: string;
   venue: string | null;
@@ -34,6 +35,7 @@ function rowToRecord(row: RecordRow): CosplayRecord {
     date: row.record_date,
     character: row.character_name,
     characterVersion: row.character_version ?? "",
+    personCount: row.person_count ?? 1,
     series: row.series_title ?? "",
     event: row.event_name ?? "",
     venue: row.venue ?? "",
@@ -52,6 +54,7 @@ function inputToRow(record: CosplayRecordInput, userId: string) {
     record_date: record.date,
     character_name: record.character,
     character_version: record.characterVersion ?? "",
+    person_count: record.personCount ?? 1,
     series_title: record.series ?? "",
     event_name: record.event ?? "",
     venue: record.venue ?? "",
@@ -95,6 +98,7 @@ export async function updateRecord(id: string, record: CosplayRecordInput): Prom
       record_date: record.date,
       character_name: record.character,
       character_version: record.characterVersion ?? "",
+      person_count: record.personCount ?? 1,
       series_title: record.series ?? "",
       event_name: record.event ?? "",
       venue: record.venue ?? "",

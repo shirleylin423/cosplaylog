@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { CalendarDays, LayoutGrid, LogOut } from "lucide-react";
 
@@ -11,6 +12,7 @@ import { useRecords } from "@/hooks/use-records";
 import { useTheme } from "@/hooks/use-theme";
 import { buildTypeColorMap, collectShootTypes, loadCustomTypes, saveCustomTypes } from "@/lib/shoot-types";
 import { collectRecentTags, collectTags } from "@/lib/record-tags";
+import { averagePeriodForFilter } from "@/lib/stats";
 import type { CosplayRecord, CosplayRecordInput } from "@/lib/record-types";
 import { ROLE_ORDER, type UserRole } from "@/lib/roles";
 
@@ -210,6 +212,7 @@ export default function RecordsPage() {
       await saveRoles(enabledRoles, role);
     } catch (error) {
       console.error("儲存身分設定失敗：", error);
+      toast.error(t("role.saveFailed"));
     }
   }
 
@@ -229,6 +232,7 @@ export default function RecordsPage() {
       await saveRoles(nextEnabled, nextActive);
     } catch (error) {
       console.error("儲存身分設定失敗：", error);
+      toast.error(t("role.saveFailed"));
     }
   }
 
@@ -404,7 +408,13 @@ export default function RecordsPage() {
               <ViewToggle />
             </div>
 
-            <StatsSummary records={filtered} role={currentRole} typeColorMap={typeColorMap} onApplySearch={applySearch} />
+            <StatsSummary
+              records={filtered}
+              role={currentRole}
+              averagePeriod={averagePeriodForFilter(filter)}
+              typeColorMap={typeColorMap}
+              onApplySearch={applySearch}
+            />
 
             <FilterBar
               records={roleRecords}
